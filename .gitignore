@@ -49,6 +49,9 @@ results/
 .mdc_cache.json
 .mdc_remote_cache/
 
+# Playwright installation marker
+.playwright_installed
+
 # Test files
 .pytest_cache/
 .coverage
@@ -61,3 +64,4 @@ temp/
 
 # Documentation archive (not needed for deployment)
 docs_archive/
+
