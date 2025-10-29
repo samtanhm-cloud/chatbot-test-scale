@@ -1,6 +1,7 @@
 {
   "name": "streamlit-mdc-executor",
   "version": "1.0.0",
+  "type": "module",
   "description": "MDC Executor with Playwright MCP for Streamlit",
   "main": "mdc_executor.js",
   "scripts": {
@@ -21,6 +22,4 @@
   "author": "",
   "license": "MIT"
 }
-
-
 
