@@ -162,61 +162,45 @@ class MDCExecutor {
     }
 
     async startMCPConnection() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                // Spawn the MCP server process
-                console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
-                this.mcpServerProcess = spawn(this.mcpServerPath, this.mcpServerArgs, {
-                    stdio: ['pipe', 'pipe', 'pipe']
-                });
-                
-                // Handle process errors
-                this.mcpServerProcess.on('error', (error) => {
-                    console.error('[MCP Server] Process error:', error);
-                    reject(error);
-                });
-                
-                // Log stderr
-                this.mcpServerProcess.stderr.on('data', (data) => {
-                    const message = data.toString().trim();
-                    if (message) {
-                        console.error('[MCP Server stderr]', message);
-                    }
-                });
-                
-                // Create MCP client with stdio transport
-                const transport = new StdioClientTransport({
-                    stdin: this.mcpServerProcess.stdin,
-                    stdout: this.mcpServerProcess.stdout
-                });
-                
-                this.mcpClient = new Client({
-                    name: 'mdc-executor',
-                    version: '2.0.0'
-                }, {
-                    capabilities: {
-                        tools: {}
-                    }
-                });
-                
-                // Connect the client
-                await this.mcpClient.connect(transport);
-                console.log('[MCP Server] Connected successfully');
-                
-                // List available tools
-                const toolsList = await this.mcpClient.listTools();
-                console.log(`[MCP Server] Available tools: ${toolsList.tools.length}`);
+        try {
+            // Log what we're starting
+            console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
+            
+            // Create MCP client
+            this.mcpClient = new Client({
+                name: 'mdc-executor',
+                version: '2.0.0'
+            }, {
+                capabilities: {
+                    tools: {}
+                }
+            });
+            
+            // Create transport (SDK will spawn and manage the process internally)
+            const transport = new StdioClientTransport({
+                command: this.mcpServerPath,
+                args: this.mcpServerArgs
+            });
+            
+            // Connect the client
+            await this.mcpClient.connect(transport);
+            console.log('[MCP Server] Connected successfully');
+            
+            // List available tools
+            const toolsList = await this.mcpClient.listTools();
+            console.log(`[MCP Server] Available tools: ${toolsList.tools.length}`);
+            
+            // Show tool names if not too many
+            if (toolsList.tools.length > 0 && toolsList.tools.length < 20) {
                 toolsList.tools.forEach(tool => {
                     console.log(`[MCP Server]   - ${tool.name}`);
                 });
-                
-                resolve();
-                
-            } catch (error) {
-                console.error('[MCP Server] Failed to start:', error);
-                reject(error);
             }
-        });
+            
+        } catch (error) {
+            console.error('[MCP Server] Failed to start:', error.message);
+            throw error;
+        }
     }
 
     async stopMCPConnection() {
@@ -230,28 +214,7 @@ class MDCExecutor {
                 console.log('[MCP Server] Client disconnected');
             }
             
-            // Kill server process
-            if (this.mcpServerProcess && !this.mcpServerProcess.killed) {
-                this.mcpServerProcess.kill();
-                
-                // Wait for process to exit
-                await new Promise((resolve) => {
-                    const timeout = setTimeout(() => {
-                        if (!this.mcpServerProcess.killed) {
-                            this.mcpServerProcess.kill('SIGKILL');
-                        }
-                        resolve();
-                    }, 5000);
-                    
-                    this.mcpServerProcess.on('close', () => {
-                        clearTimeout(timeout);
-                        resolve();
-                    });
-                });
-                
-                this.mcpServerProcess = null;
-                console.log('[MCP Server] Process stopped');
-            }
+            // No need to manually kill process - SDK handles it when client closes
         } catch (error) {
             console.error('[MCP Server] Error during shutdown:', error);
         }
