@@ -14,7 +14,6 @@ maxUploadSize = 200
 [browser]
 gatherUsageStats = false
 
-[runner]
-# Install npm packages before app starts
-postStartCommand = "cd /mount/src/chatbot-test-scale && npm install"
+# Note: runner.postStartCommand is not supported by Streamlit Cloud
+# npm install is now handled in app.py at startup instead
 
