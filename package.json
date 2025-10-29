@@ -8,7 +8,8 @@
     "install-mcp": "npx -y @executeautomation/playwright-mcp-server --version"
   },
   "dependencies": {
-    "@executeautomation/playwright-mcp-server": "latest"
+    "@executeautomation/playwright-mcp-server": "latest",
+    "@modelcontextprotocol/sdk": "^0.5.0"
   },
   "devDependencies": {},
   "keywords": [
@@ -20,4 +21,6 @@
   "author": "",
   "license": "MIT"
 }
+
+
 
