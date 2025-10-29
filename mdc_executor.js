@@ -1,18 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * MDC Executor for Playwright MCP
- * Executes MDC files with Playwright browser automation
+ * MDC Executor for Playwright MCP - REAL IMPLEMENTATION
+ * Executes MDC files with actual Playwright browser automation via MCP SDK
+ * Version: 2.0.0 - Production Ready
  */
 
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
 
 class MDCExecutor {
     constructor() {
         this.mcpServerPath = process.env.MCP_SERVER_PATH || 'npx';
-        this.mcpServerArgs = process.env.MCP_SERVER_ARGS?.split(' ') || ['-y', '@executeautomation/playwright-mcp-server'];
+        this.mcpServerArgs = process.env.MCP_SERVER_ARGS?.split(' ') || 
+            ['-y', '@executeautomation/playwright-mcp-server'];
+        this.mcpClient = null;
+        this.mcpServerProcess = null;
     }
 
     async executeMDC(mdcFilePath, context = {}) {
@@ -27,9 +33,21 @@ class MDCExecutor {
             const commands = this.parseMDCCommands(mdcContent);
             console.log(`[MDC Executor] Parsed ${commands.length} commands`);
             
-            // Start MCP server
+            if (commands.length === 0) {
+                console.warn('[MDC Executor] Warning: No MCP commands found in file');
+                return {
+                    success: false,
+                    error: 'No executable commands found in MDC file',
+                    total_commands: 0,
+                    successful: 0,
+                    failed: 0,
+                    results: []
+                };
+            }
+            
+            // Start MCP server and connect client
             console.log('[MDC Executor] Starting Playwright MCP server...');
-            const mcpServer = await this.startMCPServer();
+            await this.startMCPConnection();
             
             // Execute commands sequentially
             const results = [];
@@ -42,14 +60,21 @@ class MDCExecutor {
                 console.log(`[MDC Executor] Command ${i + 1} result:`, 
                     result.success ? '✓ Success' : '✗ Failed');
                 
+                // Log detailed output if available
+                if (result.output && typeof result.output === 'object') {
+                    console.log(`[MDC Executor] Output:`, JSON.stringify(result.output, null, 2));
+                }
+                
+                // Stop on critical failure
                 if (!result.success && !commands[i].optional) {
                     console.error(`[MDC Executor] Critical command failed, stopping execution`);
+                    console.error(`[MDC Executor] Error:`, result.error);
                     break;
                 }
             }
             
             // Stop MCP server
-            await this.stopMCPServer(mcpServer);
+            await this.stopMCPConnection();
             
             // Compile final results
             const summary = this.generateSummary(results);
@@ -60,10 +85,18 @@ class MDCExecutor {
             
         } catch (error) {
             console.error('[MDC Executor] Fatal error:', error);
+            
+            // Ensure cleanup
+            await this.stopMCPConnection();
+            
             return {
                 success: false,
                 error: error.message,
-                stack: error.stack
+                stack: error.stack,
+                total_commands: 0,
+                successful: 0,
+                failed: 0,
+                results: []
             };
         }
     }
@@ -71,7 +104,7 @@ class MDCExecutor {
     parseMDCCommands(mdcContent) {
         /**
          * Parse MDC file format
-         * Expected format (simplified):
+         * Expected format:
          * ```mcp
          * {
          *   "tool": "browser_navigate",
@@ -82,22 +115,45 @@ class MDCExecutor {
         const commands = [];
         const lines = mdcContent.split('\n');
         let inCodeBlock = false;
+        let inMcpBlock = false;
         let currentCommand = '';
+        let lineNumber = 0;
         
         for (const line of lines) {
-            if (line.trim().startsWith('```')) {
+            lineNumber++;
+            const trimmed = line.trim();
+            
+            if (trimmed.startsWith('```')) {
                 if (inCodeBlock) {
-                    // End of code block, parse command
-                    try {
-                        const cmd = JSON.parse(currentCommand);
-                        commands.push(cmd);
-                        currentCommand = '';
-                    } catch (e) {
-                        console.warn('[MDC Parser] Failed to parse command:', e.message);
+                    // End of code block
+                    if (inMcpBlock) {
+                        // Try to parse the MCP command
+                        try {
+                            const cmd = JSON.parse(currentCommand.trim());
+                            if (cmd.tool) {
+                                commands.push({
+                                    ...cmd,
+                                    _lineNumber: lineNumber
+                                });
+                            } else {
+                                console.warn(`[MDC Parser] Line ${lineNumber}: Command missing 'tool' property`);
+                            }
+                        } catch (e) {
+                            console.warn(`[MDC Parser] Line ${lineNumber}: Failed to parse command:`, e.message);
+                        }
+                        inMcpBlock = false;
+                    }
+                    currentCommand = '';
+                    inCodeBlock = false;
+                } else {
+                    // Start of code block
+                    inCodeBlock = true;
+                    // Check if it's an MCP block
+                    if (trimmed === '```mcp' || trimmed.startsWith('```mcp ')) {
+                        inMcpBlock = true;
                     }
                 }
-                inCodeBlock = !inCodeBlock;
-            } else if (inCodeBlock) {
+            } else if (inCodeBlock && inMcpBlock) {
                 currentCommand += line + '\n';
             }
         }
@@ -105,93 +161,147 @@ class MDCExecutor {
         return commands;
     }
 
-    async startMCPServer() {
-        return new Promise((resolve, reject) => {
-            const server = spawn(this.mcpServerPath, this.mcpServerArgs, {
-                stdio: ['pipe', 'pipe', 'pipe']
-            });
-            
-            let started = false;
-            
-            server.stdout.on('data', (data) => {
-                const output = data.toString();
-                console.log('[MCP Server]', output);
+    async startMCPConnection() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Spawn the MCP server process
+                console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
+                this.mcpServerProcess = spawn(this.mcpServerPath, this.mcpServerArgs, {
+                    stdio: ['pipe', 'pipe', 'pipe']
+                });
                 
-                if (!started && (output.includes('ready') || output.includes('listening'))) {
-                    started = true;
-                    resolve(server);
-                }
-            });
-            
-            server.stderr.on('data', (data) => {
-                console.error('[MCP Server Error]', data.toString());
-            });
-            
-            server.on('error', (error) => {
+                // Handle process errors
+                this.mcpServerProcess.on('error', (error) => {
+                    console.error('[MCP Server] Process error:', error);
+                    reject(error);
+                });
+                
+                // Log stderr
+                this.mcpServerProcess.stderr.on('data', (data) => {
+                    const message = data.toString().trim();
+                    if (message) {
+                        console.error('[MCP Server stderr]', message);
+                    }
+                });
+                
+                // Create MCP client with stdio transport
+                const transport = new StdioClientTransport({
+                    stdin: this.mcpServerProcess.stdin,
+                    stdout: this.mcpServerProcess.stdout
+                });
+                
+                this.mcpClient = new Client({
+                    name: 'mdc-executor',
+                    version: '2.0.0'
+                }, {
+                    capabilities: {
+                        tools: {}
+                    }
+                });
+                
+                // Connect the client
+                await this.mcpClient.connect(transport);
+                console.log('[MCP Server] Connected successfully');
+                
+                // List available tools
+                const toolsList = await this.mcpClient.listTools();
+                console.log(`[MCP Server] Available tools: ${toolsList.tools.length}`);
+                toolsList.tools.forEach(tool => {
+                    console.log(`[MCP Server]   - ${tool.name}`);
+                });
+                
+                resolve();
+                
+            } catch (error) {
                 console.error('[MCP Server] Failed to start:', error);
                 reject(error);
-            });
-            
-            // Timeout if server doesn't start
-            setTimeout(() => {
-                if (!started) {
-                    console.log('[MCP Server] Assuming started (timeout)');
-                    resolve(server);
-                }
-            }, 3000);
-        });
-    }
-
-    async stopMCPServer(server) {
-        return new Promise((resolve) => {
-            if (server && !server.killed) {
-                server.on('close', () => {
-                    console.log('[MCP Server] Stopped');
-                    resolve();
-                });
-                server.kill();
-                
-                // Force kill after 5 seconds
-                setTimeout(() => {
-                    if (!server.killed) {
-                        server.kill('SIGKILL');
-                    }
-                    resolve();
-                }, 5000);
-            } else {
-                resolve();
             }
         });
     }
 
-    async executeCommand(command, context) {
-        /**
-         * Execute a single MCP command
-         * This is a simplified version - in production, you'd send actual MCP protocol messages
-         */
-        console.log(`[Command Executor] Tool: ${command.tool}`);
+    async stopMCPConnection() {
+        console.log('[MCP Server] Stopping connection...');
         
         try {
-            // Simulate command execution with timeout
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Close MCP client
+            if (this.mcpClient) {
+                await this.mcpClient.close();
+                this.mcpClient = null;
+                console.log('[MCP Server] Client disconnected');
+            }
             
-            // In a real implementation, you would:
-            // 1. Format the command as an MCP request
-            // 2. Send it to the MCP server via stdio
-            // 3. Wait for and parse the response
+            // Kill server process
+            if (this.mcpServerProcess && !this.mcpServerProcess.killed) {
+                this.mcpServerProcess.kill();
+                
+                // Wait for process to exit
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        if (!this.mcpServerProcess.killed) {
+                            this.mcpServerProcess.kill('SIGKILL');
+                        }
+                        resolve();
+                    }, 5000);
+                    
+                    this.mcpServerProcess.on('close', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    });
+                });
+                
+                this.mcpServerProcess = null;
+                console.log('[MCP Server] Process stopped');
+            }
+        } catch (error) {
+            console.error('[MCP Server] Error during shutdown:', error);
+        }
+    }
+
+    async executeCommand(command, context) {
+        /**
+         * Execute a single MCP command using the real MCP SDK
+         */
+        console.log(`[Command Executor] Tool: ${command.tool}`);
+        console.log(`[Command Executor] Params:`, JSON.stringify(command.params || {}, null, 2));
+        
+        try {
+            if (!this.mcpClient) {
+                throw new Error('MCP client not connected');
+            }
+            
+            // Call the tool via MCP SDK
+            const startTime = Date.now();
+            const result = await this.mcpClient.callTool({
+                name: command.tool,
+                arguments: command.params || {}
+            });
+            const duration = Date.now() - startTime;
+            
+            console.log(`[Command Executor] Completed in ${duration}ms`);
+            
+            // Parse the result
+            let parsedContent = result.content;
+            if (Array.isArray(result.content) && result.content.length > 0) {
+                parsedContent = result.content[0];
+            }
             
             return {
-                success: true,
+                success: !result.isError,
                 tool: command.tool,
-                output: `Executed ${command.tool} successfully`,
-                timestamp: new Date().toISOString()
+                output: parsedContent?.text || parsedContent || 'Command executed successfully',
+                duration: duration,
+                timestamp: new Date().toISOString(),
+                isError: result.isError || false
             };
             
         } catch (error) {
+            console.error(`[Command Executor] Error:`, error.message);
+            
             return {
                 success: false,
                 tool: command.tool,
                 error: error.message,
+                stack: error.stack,
                 timestamp: new Date().toISOString()
             };
         }
@@ -200,12 +310,15 @@ class MDCExecutor {
     generateSummary(results) {
         const successful = results.filter(r => r.success).length;
         const failed = results.filter(r => !r.success).length;
+        const totalDuration = results.reduce((sum, r) => sum + (r.duration || 0), 0);
         
         return {
             success: failed === 0,
             total_commands: results.length,
             successful,
             failed,
+            total_duration_ms: totalDuration,
+            average_duration_ms: results.length > 0 ? Math.round(totalDuration / results.length) : 0,
             results,
             timestamp: new Date().toISOString()
         };
@@ -218,6 +331,10 @@ async function main() {
     
     if (args.length === 0) {
         console.error('Usage: node mdc_executor.js <mdc-file-path> [--context <json>]');
+        console.error('');
+        console.error('Example:');
+        console.error('  node mdc_executor.js automation.mdc');
+        console.error('  node mdc_executor.js automation.mdc --context \'{"assetId": "123"}\'');
         process.exit(1);
     }
     
@@ -229,8 +346,10 @@ async function main() {
     if (contextIndex !== -1 && args[contextIndex + 1]) {
         try {
             context = JSON.parse(args[contextIndex + 1]);
+            console.log('[MDC Executor] Context:', JSON.stringify(context, null, 2));
         } catch (e) {
             console.error('Failed to parse context JSON:', e.message);
+            process.exit(1);
         }
     }
     
