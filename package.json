@@ -1,0 +1,23 @@
+{
+  "name": "streamlit-mdc-executor",
+  "version": "1.0.0",
+  "description": "MDC Executor with Playwright MCP for Streamlit",
+  "main": "mdc_executor.js",
+  "scripts": {
+    "start": "node mdc_executor.js",
+    "install-mcp": "npx -y @executeautomation/playwright-mcp-server --version"
+  },
+  "dependencies": {
+    "@executeautomation/playwright-mcp-server": "latest"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "mdc",
+    "playwright",
+    "mcp",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
