@@ -1,5 +1,6 @@
 nodejs
 npm
+xvfb
 libnspr4
 libnss3
 libatk1.0-0
@@ -22,5 +23,3 @@ libxtst6
 fonts-liberation
 libappindicator3-1
 xdg-utils
-
-
