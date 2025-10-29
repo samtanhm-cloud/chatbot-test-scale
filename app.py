@@ -15,6 +15,55 @@ from openai import OpenAI
 import requests
 from datetime import datetime, timedelta
 
+# ============================================================================
+# NPM INSTALL CHECK - Install MCP SDK if not present
+# ============================================================================
+def ensure_npm_packages():
+    """
+    Ensure npm packages are installed before app starts.
+    This is needed because Streamlit Cloud doesn't automatically run npm install.
+    """
+    import sys
+    
+    # Check if running on Streamlit Cloud
+    is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
+    
+    # Path to node_modules
+    node_modules_path = Path(__file__).parent / 'node_modules'
+    mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
+    
+    # Check if MCP SDK is installed
+    if not mcp_sdk_path.exists():
+        print("⚠️  MCP SDK not found, installing npm packages...")
+        
+        try:
+            # Run npm install
+            result = subprocess.run(
+                ['npm', 'install', '--production', '--prefer-offline'],
+                cwd=Path(__file__).parent,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            if result.returncode == 0:
+                print("✅ npm packages installed successfully")
+                print(result.stdout)
+            else:
+                print(f"❌ npm install failed: {result.stderr}")
+                # Continue anyway - app might still work in degraded mode
+        except subprocess.TimeoutExpired:
+            print("⚠️  npm install timed out after 5 minutes")
+        except FileNotFoundError:
+            print("❌ npm not found - Node.js may not be installed")
+        except Exception as e:
+            print(f"❌ Error installing npm packages: {e}")
+    else:
+        print("✅ MCP SDK already installed")
+
+# Install npm packages on first run
+ensure_npm_packages()
+
 # Page configuration
 st.set_page_config(
     page_title="MDC Automation Executor",
