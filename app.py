@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 # ============================================================================
 def ensure_npm_packages():
     """
-    Ensure npm packages are installed before app starts.
+    Ensure npm packages and Playwright browsers are installed before app starts.
     This is needed because Streamlit Cloud doesn't automatically run npm install.
     """
     import sys
@@ -31,6 +31,7 @@ def ensure_npm_packages():
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
     mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
+    playwright_marker = Path(__file__).parent / '.playwright_installed'
     
     # Check if MCP SDK is installed
     if not mcp_sdk_path.exists():
@@ -60,6 +61,46 @@ def ensure_npm_packages():
             print(f"❌ Error installing npm packages: {e}")
     else:
         print("✅ MCP SDK already installed")
+    
+    # Install Playwright browsers if not already installed
+    if not playwright_marker.exists():
+        print("⚠️  Installing Playwright browsers (chromium)...")
+        
+        try:
+            # Install Playwright browsers
+            result = subprocess.run(
+                ['npx', 'playwright', 'install', 'chromium', '--with-deps'],
+                cwd=Path(__file__).parent,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout for browser download
+            )
+            
+            if result.returncode == 0:
+                print("✅ Playwright browsers installed successfully")
+                # Create marker file
+                playwright_marker.touch()
+            else:
+                print(f"⚠️  Playwright install warning: {result.stderr}")
+                # Try without --with-deps (deps already in packages.txt)
+                result2 = subprocess.run(
+                    ['npx', 'playwright', 'install', 'chromium'],
+                    cwd=Path(__file__).parent,
+                    capture_output=True,
+                    text=True,
+                    timeout=600
+                )
+                if result2.returncode == 0:
+                    print("✅ Playwright chromium installed")
+                    playwright_marker.touch()
+        except subprocess.TimeoutExpired:
+            print("⚠️  Playwright install timed out after 10 minutes")
+        except FileNotFoundError:
+            print("❌ npx not found")
+        except Exception as e:
+            print(f"❌ Error installing Playwright: {e}")
+    else:
+        print("✅ Playwright browsers already installed")
 
 # Install npm packages on first run
 ensure_npm_packages()
