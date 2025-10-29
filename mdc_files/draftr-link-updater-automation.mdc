@@ -1,770 +1,407 @@
----
-name: Draftr Link Updater (Permanent Link Modification)
-description: Authenticate, navigate to Draftr assets, update anchor links permanently
-version: 1.1.0
-author: AI Assistant
-alwaysApply: false
-changelog: |
-  v1.1.0 - TESTED & VERIFIED WORKFLOW
-    • ✅ Successfully tested on real Draftr asset (ID: 3934202)
-    • 🔑 Documented critical "Press Enter" step for field commit
-    • 📋 Added detailed save workflow with visual diagram
-    • ⚠️ Documented what does NOT work (common pitfalls)
-    • ✅ Added verification steps with reload confirmation
-    • 📝 Added real code examples from successful test run
-    
-  v1.0.0 - INITIAL RELEASE
-    • Automated login and authentication to Draftr
-    • Navigate to specific asset by ID
-    • Find and update anchor links by pattern or specific criteria
-    • Save changes permanently to Draftr system
-    • Batch processing support for multiple assets
-    • Verification of successful updates
----
+# Draftr Link Updater Automation
 
-# Draftr Link Updater Automation (v1.1.0)
+**Permanently updates links in Draftr email assets**
 
 ## 🎯 What This Does
-
-**Permanently updates links in Draftr email assets:**
 - Authenticates to Draftr system
-- Navigates to specific asset(s) by ID
+- Navigates to specific asset by ID
 - Finds links matching your criteria
 - Updates link URLs permanently
 - Saves changes to Draftr backend
 - Verifies successful updates
 
 ## 💡 Key Capabilities
+✅ Update by Pattern (domain change)
+✅ Update by specific URL
+✅ Update by anchor text
+✅ Permanent changes saved to backend
+✅ Verification with reload
 
-✅ **Update by Pattern**: Change all links from old domain to new domain
-✅ **Update by Text**: Find links by anchor text and update URLs
-✅ **Batch Processing**: Update multiple assets in sequence
-✅ **Permanent Changes**: Changes saved to Draftr backend (not temporary browser modifications)
-✅ **Verification**: Confirms updates were successfully saved
-
----
-
-## 📋 Required User Inputs
-
-### INPUT 1: Authentication (One-Time per Session)
-```
-REQUIRED: Draftr login credentials or SSO authentication
+## 📋 Required Inputs
 - Draftr URL: https://webpub.autodesk.com/draftr/
-- Will prompt for login if not already authenticated
-```
+- Asset ID: e.g., 3934202
+- Old URL pattern or specific URL
+- New URL to replace
 
-### INPUT 2: Asset Information
-```
-REQUIRED: Draftr asset ID(s) to update
-Format: Single ID or comma-separated list
-Example: 3934202
-Example: 3934202,3927289,3935502
-```
-
-### INPUT 3: Link Update Criteria
-Choose ONE of the following options:
-
-**Option A: Pattern-Based Update (Domain Change)**
-```
-Find: old-domain.com
-Replace with: new-domain.com
-Scope: All links containing the pattern
-```
-
-**Option B: Specific Link Update**
-```
-Old URL: https://example.com/old-page
-New URL: https://example.com/new-page
-Scope: Only exact matches
-```
-
-**Option C: Anchor Text-Based Update**
-```
-Anchor Text: "Click here to learn more"
-New URL: https://example.com/updated-page
-Scope: Links with matching anchor text
-```
-
-**Option D: Bulk Update from CSV**
-```
-CSV Format: Old URL,New URL
-Provides: List of multiple URL replacements
-```
+## Keywords
+draftr, link, update, email, automation, anchor, url, replace, save
 
 ---
 
-## 🔄 Automation Workflow
+## PHASE 1: Authentication & Setup
 
-### PHASE 1: Authentication & Setup
+### Step 1.1: Navigate to Draftr
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/"
+  }
+}
+```
 
-**Step 1.1: Navigate to Draftr**
-- Navigate to: `https://webpub.autodesk.com/draftr/`
-- Wait for page load
+### Step 1.2: Wait for page load
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
 
-**Step 1.2: Authentication Check**
-- Check if already authenticated (look for user profile/dashboard)
-- If not authenticated:
-  - Wait for SSO/login screen
-  - Allow user to authenticate (Autodesk SSO)
-  - Wait for successful login confirmation
-  - Verify access to Draftr dashboard
+### Step 1.3: Take snapshot to check authentication
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
 
-**Step 1.3: Get User Inputs**
-- Prompt for Asset ID(s)
-- Prompt for update criteria (Option A, B, C, or D)
-- Validate inputs
-- Create TODO list for processing
-
----
-
-### PHASE 2: Asset Navigation & Link Discovery
-
-**For Each Asset ID:**
-
-**Step 2.1: Navigate to Asset**
-- URL: `https://webpub.autodesk.com/draftr/asset/{ASSET_ID}`
-- Wait for asset to load completely
-- Verify asset exists (handle 404/403 errors)
-
-**Step 2.2: Enter Edit Mode**
-- Look for "Edit" button or edit mode toggle
-- Click to enter edit mode
-- Wait for editor interface to load
-- Verify edit mode is active
-
-**Step 2.3: Extract Current Links**
-- Use `browser_evaluate` to extract all anchor tags
-- Capture: href, anchor text, position in document
-- Store link inventory for comparison
-
-```javascript
-function extractAllLinks() {
-    const links = [];
-    const anchors = document.querySelectorAll('a[href]');
-    
-    anchors.forEach((anchor, index) => {
-        links.push({
-            index: index,
-            href: anchor.href,
-            text: anchor.textContent.trim(),
-            originalHtml: anchor.outerHTML
-        });
-    });
-    
-    return {
-        totalLinks: links.length,
-        links: links,
-        assetId: window.location.pathname.split('/').pop()
-    };
+### Step 1.4: Screenshot of login/dashboard
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "draftr-auth-check.png",
+    "type": "png"
+  }
 }
 ```
 
 ---
 
-### PHASE 3: Link Identification & Update
+## PHASE 2: Asset Navigation & Link Discovery
 
-**Step 3.1: Identify Target Links**
-
-Based on user's update criteria, filter links:
-
-**Option A - Pattern-Based:**
-```javascript
-function identifyPatternLinks(allLinks, findPattern) {
-    return allLinks.filter(link => 
-        link.href.includes(findPattern)
-    );
+### Step 2.1: Navigate to specific asset
+**Note: Replace 3934202 with your actual asset ID**
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/3934202"
+  }
 }
 ```
 
-**Option B - Specific URL:**
-```javascript
-function identifySpecificLink(allLinks, oldUrl) {
-    return allLinks.filter(link => 
-        link.href === oldUrl
-    );
+### Step 2.2: Wait for asset to load
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
 }
 ```
 
-**Option C - Anchor Text:**
-```javascript
-function identifyByAnchorText(allLinks, anchorText) {
-    return allLinks.filter(link => 
-        link.text.toLowerCase().includes(anchorText.toLowerCase())
-    );
+### Step 2.3: Take snapshot of asset page
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
 }
 ```
 
-**Step 3.2: Preview Changes**
-- Display links that will be updated
-- Show: Current URL → New URL
-- Count: X links will be updated
-
-**Step 3.3: Execute Updates**
-
-**⚠️ CRITICAL: Use Draftr's Native Editing Interface**
-
-This automation must use Draftr's built-in link editing functionality, NOT direct DOM manipulation. Here's why:
-
-❌ **Wrong Approach** (Temporary):
-```javascript
-// This only changes browser display - NOT saved to backend
-document.querySelector('a').href = 'new-url.com';
-```
-
-✅ **Correct Approach** (Permanent):
-
-**Method 1: Visual Editor Interface**
-1. Click on the link element in Draftr's visual editor
-2. Look for "Edit Link" or link properties panel
-3. Update href field in the properties panel
-4. Click "Apply" or "Update"
-
-**Method 2: HTML/Source Editor**
-1. Switch to HTML/Source view in Draftr
-2. Find and replace link URLs in source code
-3. Use Draftr's find/replace feature if available
-4. Save changes
-
-**Method 3: Draftr API (if available)**
-```javascript
-// If Draftr exposes API for content updates
-await updateAssetLink(assetId, oldHref, newHref);
-```
-
-**Step 3.4: Update Execution Strategy**
-
-**🔑 CRITICAL WORKFLOW (Discovered from Testing):**
-
-```javascript
-// For each target link, use Draftr's native editing
-function updateLinkViaEditor(linkElement, newUrl) {
-    // Step 1: Click the panel/section containing the link
-    // Opens the panel editor with input fields
-    
-    // Step 2: Click on the link input field
-    // Locates the specific textbox for the URL
-    
-    // Step 3: Select all existing text (Cmd+A or Ctrl+A)
-    // Clears the field for new input
-    
-    // Step 4: Fill in the new URL
-    // Use browser_type tool to enter new URL
-    
-    // Step 5: ⚠️ CRITICAL - Press Enter key
-    // This triggers Draftr's auto-save for the field
-    // WITHOUT this step, changes will NOT persist!
-    // Changes are committed to the panel configuration
-    
-    // Step 6: Repeat for all target links in the panel
-    
-    // Step 7: Click main "Save" button (top of page)
-    // Saves the entire asset with all panel changes
-    
-    // Step 8: Verify change was applied
+### Step 2.4: Extract all links from asset
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), id: a.id || '' }); }); return { totalLinks: links.length, links: links, assetId: window.location.pathname.split('/').pop() }; }"
+  }
 }
 ```
 
-**Why Step 5 (Press Enter) is Critical:**
-- ❌ Just filling the textbox + Tab key = Changes revert
-- ❌ Just filling the textbox + clicking away = Changes revert  
-- ✅ Filling the textbox + **Press Enter** = Changes committed to panel
-- ✅ Then clicking main Save = Changes persisted to database
-
-**Real Example from Testing:**
-```javascript
-// This sequence works:
-await browser_click({ element: "Primary CTA Link", ref: "e123" });
-await browser_press_key({ key: "Meta+a" }); // Select all
-await browser_type({ text: "https://www.autodesk.com/it/support" });
-await browser_press_key({ key: "Enter" }); // CRITICAL - Commits the change
-// Observe: Auto-save triggered, timestamp updates
-await browser_click({ element: "Main Save button", ref: "e456" });
-// Observe: "Asset Saved" confirmation appears
-```
-
----
-
-### PHASE 4: Save & Verification
-
-**Step 4.1: Ensure Panel Changes Are Committed**
-
-**⚠️ CRITICAL: This step must happen BEFORE clicking main Save button**
-
-After updating each link in the panel editor:
-```javascript
-// For each link updated in a panel:
-// 1. Fill the textbox with new URL
-await browser_type({ element: "Link input", ref: "...", text: newUrl });
-
-// 2. Press Enter to commit the change to panel configuration
-await browser_press_key({ key: "Enter" });
-
-// 3. Wait briefly for auto-save indicator
-await browser_wait_for({ time: 1 });
-
-// 4. Look for "Saved at HH:MM:SS" timestamp update
-// This confirms the panel change was auto-saved
-```
-
-**Visual Indicators of Panel Auto-Save:**
-- ✅ Timestamp updates (e.g., "Saved at 13:29:54")
-- ✅ Link appears in preview with new URL
-- ✅ No revert when clicking away from field
-
-**Step 4.2: Save Asset to Draftr Backend**
-
-**Now click the main Save button to persist all changes:**
-- Location: Top toolbar, usually near "Preview" and "Export" buttons
-- Label: "Save" (may have disk/save icon)
-- Purpose: Saves ALL panel changes to Draftr database
-
-**Click main save button:**
-```javascript
-// Click the main Save button (top of page, not panel save)
-await browser_click({ element: "Save button", ref: "e9" });
-
-// Wait for save confirmation
-await browser_wait_for({ time: 2 });
-```
-
-**Expected Confirmation:**
-- Success toast/notification: "Asset Saved" or "Asset Updated"
-- Timestamp update in header
-- No "unsaved changes" warning
-
-**Step 4.3: Verify Changes Were Persisted**
-
-**Method 1: Visual Confirmation**
-- Look for success notification/toast message (e.g., "Asset Saved")
-- Check for "Last saved" timestamp update in header
-- Verify no unsaved changes indicator
-
-**Method 2: Reload & Re-check (RECOMMENDED)**
-```javascript
-// CRITICAL: Reload the asset page to verify changes persisted to database
-await browser_navigate(`https://webpub.autodesk.com/draftr/asset/${assetId}`);
-await browser_wait_for({ time: 3 });
-
-// Re-extract links from rendered preview
-const updatedLinks = await browser_evaluate(extractAllLinks);
-
-// Verify: are the new URLs present in the rendered content?
-function verifyLinkUpdates(oldLinks, newLinks, expectedChanges) {
-    for (const change of expectedChanges) {
-        const updatedLink = newLinks.find(link => 
-            link.text === change.anchorText && 
-            link.href === change.newUrl
-        );
-        
-        if (!updatedLink) {
-            return { 
-                success: false, 
-                error: `Link "${change.anchorText}" not updated to ${change.newUrl}` 
-            };
-        }
-    }
-    return { success: true };
-}
-
-const verificationResult = verifyLinkUpdates(originalLinks, updatedLinks, expectedChanges);
-```
-
-**Verification Checklist:**
-- ✅ Page reloaded successfully
-- ✅ New URLs visible in rendered preview
-- ✅ Anchor text preserved (unchanged)
-- ✅ Links are clickable and functional
-- ✅ No unexpected changes to other links
-
-**Step 4.4: Generate Update Report**
-```
-Asset ID: 3934202
-Links Updated: 5
-Successful: 5
-Failed: 0
-
-Updated Links:
-1. "Learn More" → https://old.com/page → https://new.com/page ✅
-2. "Support" → https://old.com/support → https://new.com/support ✅
-3. "Contact Us" → https://old.com/contact → https://new.com/contact ✅
-4. "Documentation" → https://old.com/docs → https://new.com/docs ✅
-5. "Download" → https://old.com/download → https://new.com/download ✅
-```
-
----
-
-### PHASE 5: Batch Processing (Multiple Assets)
-
-**If multiple asset IDs provided:**
-
-**Step 5.1: Create Processing Queue**
-```
-TODO List:
-1. ☐ Asset 3934202 - Update links
-2. ☐ Asset 3927289 - Update links
-3. ☐ Asset 3935502 - Update links
-```
-
-**Step 5.2: Process Each Asset Sequentially**
-- For each asset: Run PHASE 2 → PHASE 3 → PHASE 4
-- Mark each as complete after verification
-- Continue even if one asset fails
-- Log any errors for review
-
-**Step 5.3: Generate Batch Summary**
-```csv
-Asset ID,Total Links,Updated Links,Status,Notes
-3934202,15,5,Success,All pattern matches updated
-3927289,8,3,Success,All pattern matches updated
-3935502,12,0,Failed,Asset not found (404)
-```
-
----
-
-## 🔧 Error Handling & Recovery
-
-### Authentication Errors
-**Issue:** Session expired or not authenticated
-**Recovery:**
-- Detect login redirect
-- Pause automation
-- Wait for user to login
-- Resume from current asset
-
-### Asset Not Found (404)
-**Issue:** Asset ID doesn't exist
-**Recovery:**
-- Log error
-- Skip to next asset
-- Include in final report
-
-### Insufficient Permissions (403)
-**Issue:** User doesn't have edit access
-**Recovery:**
-- Log error with message
-- Skip asset
-- Recommend checking permissions
-
-### Save Failed
-**Issue:** Changes not persisted
-**Recovery:**
-- Retry save operation (up to 3 times)
-- Check for error messages
-- Refresh page and retry
-- Log as failed if all retries exhausted
-
-### Link Not Found
-**Issue:** Pattern/criteria matches no links
-**Recovery:**
-- Report zero matches
-- Ask user to verify criteria
-- Continue to next asset
-
----
-
-## 📊 Expected Outputs
-
-### Success Case
-```
-✅ Automation Complete
-
-Assets Processed: 3/3
-Total Links Updated: 13
-Success Rate: 100%
-
-Detailed Report:
-- Asset 3934202: 5 links updated ✅
-- Asset 3927289: 3 links updated ✅
-- Asset 3935502: 5 links updated ✅
-
-All changes saved to Draftr backend.
-```
-
-### Partial Success Case
-```
-⚠️ Automation Complete with Warnings
-
-Assets Processed: 3/3
-Total Links Updated: 8
-Success Rate: 66.7%
-
-Detailed Report:
-- Asset 3934202: 5 links updated ✅
-- Asset 3927289: 3 links updated ✅
-- Asset 3935502: 0 links updated ❌ (Asset not found)
-
-Action Required: Review failed assets
-```
-
----
-
-## 🎯 TODO List Template
-
-**AI Assistant: Create this TODO list at start of automation**
-
-```
-TODO items (Draftr Link Updater v1.0.0):
-1. ☐ PHASE 1: Authentication & input collection
-2. ☐ PHASE 2: Navigate to first asset & enter edit mode
-3. ☐ PHASE 3: Identify & update target links
-4. ☐ PHASE 4: Save changes & verify
-5. ☐ PHASE 5: Process remaining assets (if batch mode)
-6. ☐ PHASE 6: Generate final report
-```
-
----
-
-## 🚨 Critical Implementation Notes
-
-### 0. THE CORRECT SAVE WORKFLOW (MANDATORY)
-
-**🔴 This is the ONLY workflow that persists changes permanently:**
-
-```
-┌─────────────────────────────────────────────────┐
-│ STEP 1: Click panel to open editor             │
-├─────────────────────────────────────────────────┤
-│ STEP 2: Click link input textbox               │
-├─────────────────────────────────────────────────┤
-│ STEP 3: Select all text (Cmd+A / Ctrl+A)       │
-├─────────────────────────────────────────────────┤
-│ STEP 4: Type new URL                           │
-├─────────────────────────────────────────────────┤
-│ STEP 5: ⚠️  PRESS ENTER KEY  ⚠️                │
-│         (Commits change to panel config)        │
-│         (Auto-save timestamp updates)           │
-├─────────────────────────────────────────────────┤
-│ STEP 6: Repeat steps 2-5 for each link         │
-├─────────────────────────────────────────────────┤
-│ STEP 7: Click main "Save" button (top toolbar) │
-│         (Persists ALL panel changes to DB)      │
-├─────────────────────────────────────────────────┤
-│ STEP 8: Verify "Asset Saved" confirmation      │
-├─────────────────────────────────────────────────┤
-│ STEP 9: Reload page to confirm persistence     │
-└─────────────────────────────────────────────────┘
-```
-
-**❌ THESE APPROACHES DO NOT WORK:**
-```javascript
-// ❌ Fill + Tab = Changes revert after clicking away
-await browser_type({ text: newUrl });
-await browser_press_key({ key: "Tab" });  // Changes LOST
-
-// ❌ Fill + Click away = Changes revert
-await browser_type({ text: newUrl });
-await browser_click({ element: "Different element" });  // Changes LOST
-
-// ❌ Fill + Main Save immediately = Changes not committed
-await browser_type({ text: newUrl });
-await browser_click({ element: "Main Save" });  // Changes LOST
-
-// ❌ Direct DOM manipulation = Not saved to backend
-await browser_evaluate('document.querySelector("a").href = "newurl"');  // Temporary only
-```
-
-**✅ THIS APPROACH WORKS:**
-```javascript
-// ✅ Fill + Enter + Main Save = Changes persist
-await browser_type({ text: newUrl });
-await browser_press_key({ key: "Enter" });  // ← CRITICAL STEP
-// Observe: Timestamp updates, e.g., "Saved at 13:29:54"
-await browser_click({ element: "Main Save" });
-// Observe: "Asset Saved" notification
-// Reload: Changes still present ✅
-```
-
-**Why Press Enter is Required:**
-- Draftr uses auto-save for individual fields
-- Enter key triggers field validation and commit
-- Without Enter, changes remain uncommitted in browser memory
-- Main Save button only persists COMMITTED panel changes
-- Uncommitted changes are discarded on navigation/save
-
-### 1. Draftr UI Detection Strategy
-
-**The automation must adapt to Draftr's interface. Use multiple detection strategies:**
-
-**For Edit Mode:**
-```javascript
-// Try multiple selectors
-const editButton = 
-    document.querySelector('button[aria-label="Edit"]') ||
-    document.querySelector('button:contains("Edit")') ||
-    document.querySelector('a[href*="/edit"]');
-```
-
-**For Save Button:**
-```javascript
-// Try multiple selectors
-const saveButton = 
-    document.querySelector('button[aria-label="Save"]') ||
-    document.querySelector('button[type="submit"]') ||
-    document.querySelector('button:contains("Save")');
-```
-
-### 2. Wait for Dynamic Content
-
-Draftr likely uses React/Vue - content loads dynamically:
-```javascript
-// Wait for editor to fully load
-await browser_wait_for({ time: 3 });
-
-// Or wait for specific element
-await browser_snapshot(); // Check if editor loaded
-```
-
-### 3. Change Verification is Critical
-
-**Always verify changes before moving to next asset:**
-- Don't trust that clicking "Save" worked
-- Reload page and re-extract links
-- Compare old vs new URLs
-- Only mark as success if verification passes
-
-### 4. Preserve Anchor Text
-
-**When updating links, preserve the anchor text:**
-```javascript
-// Extract before update
-const originalText = link.textContent;
-
-// After URL update, verify text unchanged
-if (link.textContent !== originalText) {
-    console.error('Anchor text changed unexpectedly!');
+### Step 2.5: Screenshot before editing
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "asset-before-edit.png",
+    "type": "png"
+  }
 }
 ```
 
 ---
 
-## 🔍 Discovery Phase (First Run)
+## PHASE 3: Enter Edit Mode & Identify Links
 
-**Since Draftr's exact UI is unknown, first run should be exploratory:**
-
-**Step 1: Manual Walkthrough with AI**
-1. Navigate to asset URL
-2. Take snapshot of the page
-3. Identify: Where is edit button? What is the UI structure?
-4. Click edit button
-5. Take snapshot of edit mode
-6. Identify: How are links edited? Properties panel? Direct editing?
-7. Click on a link
-8. Take snapshot of link editing interface
-9. Document the workflow for future runs
-
-**Step 2: Adapt Automation**
-- Based on discovery, update selectors in automation
-- Test on single asset first
-- Verify changes persist after save
-- Then proceed with batch processing
-
----
-
-## 💡 Usage Examples
-
-### Example 1: Domain Migration
-```
-Scenario: Migrate all links from help.autodesk.com to support.autodesk.com
-
-Input:
-- Asset IDs: 3934202,3927289,3935502
-- Update Type: Pattern-Based
-- Find: help.autodesk.com
-- Replace: support.autodesk.com
-
-Result: All links containing old domain updated to new domain
+### Step 3.1: Look for Edit button or panel
+**Note: Adjust selector based on actual Draftr interface**
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
 ```
 
-### Example 2: Fix Broken Link
+### Step 3.2: Click on panel containing link
+**Example: Click on first panel/section with links**
+**Note: Update 'ref' with actual element reference from snapshot**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Panel with Primary CTA",
+    "ref": "div[data-panel-id]"
+  }
+}
 ```
-Scenario: Update specific broken link across multiple assets
 
-Input:
-- Asset IDs: 3934202,3927289
-- Update Type: Specific URL
-- Old: https://example.com/old-page
-- New: https://example.com/new-page
-
-Result: Exact URL match replaced in all assets
+### Step 3.3: Wait for panel editor to open
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
 ```
 
-### Example 3: Update CTA Links
-```
-Scenario: Update all "Learn More" CTAs to new landing page
-
-Input:
-- Asset IDs: 3934202
-- Update Type: Anchor Text
-- Text: "Learn More"
-- New URL: https://example.com/new-landing-page
-
-Result: All "Learn More" links updated to new URL
+### Step 3.4: Take snapshot of opened panel editor
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
 ```
 
 ---
 
-## ⚠️ Important Limitations
+## PHASE 4: Update Links (CRITICAL WORKFLOW)
 
-### What This Automation CAN Do:
-✅ Update link URLs (href attributes)
-✅ Find links by pattern, URL, or anchor text
-✅ Save changes to Draftr backend
-✅ Process multiple assets in batch
-✅ Verify changes were saved
+### Step 4.1: Click on link input field
+**Note: Update 'ref' with actual input field from panel editor**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Primary CTA Link input field",
+    "ref": "input[name*='link'], input[name*='url'], input[name*='href']"
+  }
+}
+```
 
-### What This Automation CANNOT Do:
-❌ Update links in images (image maps)
-❌ Update links in embedded CSS/JS
-❌ Modify link styling or appearance (only URL)
-❌ Create new links (only updates existing ones)
-❌ Update links in archived/locked assets (permission-dependent)
+### Step 4.2: Select all existing text (Cmd+A on Mac, Ctrl+A on Windows)
+```mcp
+{
+  "tool": "browser_press_key",
+  "params": {
+    "key": "ControlOrMeta+a"
+  }
+}
+```
+
+### Step 4.3: Type new URL
+**Note: Replace with your actual new URL**
+```mcp
+{
+  "tool": "browser_type",
+  "params": {
+    "element": "Link input field",
+    "ref": "input[name*='link'], input[name*='url']",
+    "text": "https://www.autodesk.com/support/new-page"
+  }
+}
+```
+
+### Step 4.4: ⚠️ CRITICAL - Press Enter to commit change
+**This triggers Draftr's auto-save for the field**
+**WITHOUT this step, changes will NOT persist!**
+```mcp
+{
+  "tool": "browser_press_key",
+  "params": {
+    "key": "Enter"
+  }
+}
+```
+
+### Step 4.5: Wait for auto-save indicator
+**Look for "Saved at HH:MM:SS" timestamp update**
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
+```
+
+### Step 4.6: Take snapshot to verify panel change
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 4.7: Screenshot after update
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "link-updated-in-panel.png",
+    "type": "png"
+  }
+}
+```
 
 ---
 
-## 🚀 Ready to Execute
+## PHASE 5: Save to Draftr Backend
 
-**To start automation, provide:**
-1. Asset ID(s) to update
-2. Link update criteria (pattern/specific/anchor text)
-3. Authentication (if not already logged in)
+### Step 5.1: Click main Save button (top toolbar)
+**This saves ALL panel changes to Draftr database**
+**Note: Update 'ref' with actual Save button selector**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Main Save button",
+    "ref": "button[aria-label*='Save'], button:has-text('Save')"
+  }
+}
+```
 
-The automation will handle everything else automatically.
+### Step 5.2: Wait for save confirmation
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 3
+  }
+}
+```
+
+### Step 5.3: Look for success notification
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 5.4: Screenshot of save confirmation
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "asset-saved-confirmation.png",
+    "type": "png"
+  }
+}
+```
 
 ---
 
-## 📝 Post-Automation Recommendations
+## PHASE 6: Verification (Reload & Recheck)
 
-### After Successful Updates:
-1. **Test Updated Assets**: Preview emails to ensure links work
-2. **Verify Link Tracking**: Ensure tracking parameters preserved (if applicable)
-3. **Check Localization**: If updating localized assets, verify language-specific URLs
-4. **Update Documentation**: Record what was changed and when
-5. **Notify Stakeholders**: Inform team of link updates
+### Step 6.1: Reload asset page to verify persistence
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/3934202"
+  }
+}
+```
 
-### If Errors Occurred:
-1. **Review Error Log**: Check which assets/links failed
-2. **Manual Verification**: Manually check failed assets
-3. **Retry with Adjusted Criteria**: Refine search patterns if needed
-4. **Check Permissions**: Ensure you have edit access to all assets
-5. **Contact Support**: If persistent issues, may be Draftr system problem
+### Step 6.2: Wait for page reload
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
+
+### Step 6.3: Re-extract links to verify updates
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalLinks: links.length, links: links, verification: 'Reloaded and re-extracted' }; }"
+  }
+}
+```
+
+### Step 6.4: Take verification snapshot
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 6.5: Final screenshot showing updated links
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "verification-after-reload.png",
+    "type": "png"
+  }
+}
+```
 
 ---
 
-## 🎉 Testing Results
+## 📝 Expected Results
 
-**Test Asset**: 3934202  
-**Test Date**: 2025-10-28  
-**Links Updated**: 2  
-**Result**: ✅ SUCCESS - Changes persisted after page reload  
+After execution, you should have:
+1. ✅ Navigated to Draftr asset
+2. ✅ Extracted all links (before update)
+3. ✅ Opened panel editor
+4. ✅ Updated link URL with Press Enter
+5. ✅ Saved changes to backend
+6. ✅ Verified changes persisted after reload
+7. ✅ Screenshots at each major step
+8. ✅ Link data extracted before and after
 
-**Updated Links:**
-1. "Visita il Success Center" → `https://www.autodesk.com/it/support` ✅
-2. "Scopri il piano Business" → `https://www.autodesk.com/it/products` ✅
+## ⚠️ Critical Notes
 
-**Key Discovery**: Pressing Enter after each field update is mandatory for changes to persist.
+**Why "Press Enter" is Essential:**
+- ❌ Just filling + Tab = Changes revert
+- ❌ Just filling + click away = Changes revert
+- ✅ Filling + Press Enter = Changes committed
+- ✅ Then main Save = Changes persisted to database
 
----
+**Verification is Crucial:**
+- Always reload page after saving
+- Re-extract links to confirm
+- Compare before/after link data
+- Check for "Asset Saved" notification
 
-**Version**: 1.1.0  
-**Last Updated**: 2025-10-28  
-**Status**: ✅ Tested and verified with successful updates
+## 🔧 Customization Points
+
+Update these for your specific use case:
+
+1. **Asset ID**: Line 80 - Replace `3934202` with your asset ID
+2. **New URL**: Line 162 - Replace with your target URL
+3. **Element selectors**: Update `ref` values based on actual Draftr interface
+4. **Multiple links**: Repeat Steps 4.1-4.7 for each link to update
+
+## 📊 Success Indicators
+
+- ✅ "Saved at HH:MM:SS" timestamp updates after Enter
+- ✅ "Asset Saved" notification after main Save
+- ✅ New URL appears in preview after panel edit
+- ✅ New URL persists after page reload
+- ✅ No "unsaved changes" warning
+
+## 🚨 Troubleshooting
+
+**If changes don't save:**
+- Ensure you pressed Enter after typing new URL
+- Check for auto-save timestamp update
+- Verify Save button was clicked (not just panel save)
+- Reload and check if changes persisted
+
+**If automation fails:**
+- Check authentication (may need manual login)
+- Verify asset ID is correct
+- Update element selectors (`ref`) from snapshots
+- Check browser console for errors
