@@ -28,6 +28,22 @@ def ensure_npm_packages():
     # Check if running on Streamlit Cloud
     is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
     
+    # Setup virtual display for headless browser (Streamlit Cloud has no X server)
+    if is_cloud and not os.getenv('DISPLAY'):
+        try:
+            # Start Xvfb (virtual framebuffer X server)
+            subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1280x1024x24'], 
+                           stdout=subprocess.DEVNULL, 
+                           stderr=subprocess.DEVNULL)
+            os.environ['DISPLAY'] = ':99'
+            print("✅ Virtual display started (DISPLAY=:99)")
+            # Give Xvfb a moment to initialize
+            time.sleep(1)
+        except FileNotFoundError:
+            print("⚠️  Xvfb not found, browser will run headless")
+        except Exception as e:
+            print(f"⚠️  Could not start virtual display: {e}")
+    
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
     mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
