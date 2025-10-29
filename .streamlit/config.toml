@@ -13,3 +13,8 @@ maxUploadSize = 200
 
 [browser]
 gatherUsageStats = false
+
+[runner]
+# Install npm packages before app starts
+postStartCommand = "cd /mount/src/chatbot-test-scale && npm install"
+
