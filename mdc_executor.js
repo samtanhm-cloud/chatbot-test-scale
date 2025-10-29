@@ -3,14 +3,19 @@
 /**
  * MDC Executor for Playwright MCP - REAL IMPLEMENTATION
  * Executes MDC files with actual Playwright browser automation via MCP SDK
- * Version: 2.0.0 - Production Ready
+ * Version: 2.0.0 - Production Ready (ES Module)
  */
 
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class MDCExecutor {
     constructor() {
@@ -330,12 +335,13 @@ async function main() {
     process.exit(result.success ? 0 : 1);
 }
 
-if (require.main === module) {
+// ES module equivalent of checking if this is the main module
+if (import.meta.url === `file://${process.argv[1]}`) {
     main().catch(error => {
         console.error('Fatal error:', error);
         process.exit(1);
     });
 }
 
-module.exports = { MDCExecutor };
+export { MDCExecutor };
 
