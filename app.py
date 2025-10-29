@@ -29,20 +29,49 @@ def ensure_npm_packages():
     is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
     
     # Setup virtual display for headless browser (Streamlit Cloud has no X server)
-    if is_cloud and not os.getenv('DISPLAY'):
-        try:
-            # Start Xvfb (virtual framebuffer X server)
-            subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1280x1024x24'], 
-                           stdout=subprocess.DEVNULL, 
-                           stderr=subprocess.DEVNULL)
-            os.environ['DISPLAY'] = ':99'
-            print("✅ Virtual display started (DISPLAY=:99)")
-            # Give Xvfb a moment to initialize
-            time.sleep(1)
-        except FileNotFoundError:
-            print("⚠️  Xvfb not found, browser will run headless")
-        except Exception as e:
-            print(f"⚠️  Could not start virtual display: {e}")
+    if is_cloud:
+        print("🔍 Checking virtual display setup...")
+        print(f"   Current DISPLAY: {os.getenv('DISPLAY', 'NOT SET')}")
+        
+        if not os.getenv('DISPLAY'):
+            try:
+                # Start Xvfb (virtual framebuffer X server)
+                print("🚀 Starting Xvfb virtual display...")
+                xvfb_process = subprocess.Popen(
+                    ['Xvfb', ':99', '-screen', '0', '1280x1024x24', '-ac', '+extension', 'GLX', '+render', '-noreset'], 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE
+                )
+                
+                # Set DISPLAY for this process AND all subprocesses
+                os.environ['DISPLAY'] = ':99'
+                
+                # Also set in Streamlit's environment
+                import streamlit as st
+                if hasattr(st, 'session_state'):
+                    st.session_state['DISPLAY'] = ':99'
+                
+                print("✅ Virtual display started (DISPLAY=:99)")
+                print(f"   Xvfb PID: {xvfb_process.pid}")
+                
+                # Give Xvfb time to initialize
+                time.sleep(2)
+                
+                # Verify Xvfb is running
+                if xvfb_process.poll() is None:
+                    print("✅ Xvfb process is running")
+                else:
+                    stderr_output = xvfb_process.stderr.read().decode() if xvfb_process.stderr else "No error output"
+                    print(f"❌ Xvfb process died: {stderr_output}")
+                    
+            except FileNotFoundError:
+                print("❌ Xvfb not found - check packages.txt includes 'xvfb'")
+            except Exception as e:
+                print(f"❌ Could not start virtual display: {e}")
+                import traceback
+                print(traceback.format_exc())
+        else:
+            print(f"✅ DISPLAY already set: {os.getenv('DISPLAY')}")
     
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
@@ -370,12 +399,24 @@ class MDCExecutor:
             if context:
                 cmd.extend(["--context", json.dumps(context)])
             
-            # Execute
+            # Prepare environment with DISPLAY variable
+            env = os.environ.copy()
+            
+            # Ensure DISPLAY is set for browser automation
+            if 'DISPLAY' not in env or not env['DISPLAY']:
+                env['DISPLAY'] = ':99'
+                print(f"🔧 Setting DISPLAY={env['DISPLAY']} for subprocess")
+            
+            print(f"🚀 Executing: {' '.join(cmd)}")
+            print(f"📺 DISPLAY={env.get('DISPLAY', 'NOT SET')}")
+            
+            # Execute with explicit environment
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
+                env=env  # Pass environment with DISPLAY
             )
             
             return {
