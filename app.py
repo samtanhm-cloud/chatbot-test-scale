@@ -8,6 +8,7 @@ import subprocess
 import json
 import os
 import time
+import re
 from pathlib import Path
 import asyncio
 from typing import Dict, List, Optional
@@ -544,7 +545,6 @@ class MDCExecutor:
                     
                     # Check if token is expired
                     token_expires_at = st.secrets.get('AUTODESK_TOKEN_EXPIRES_AT', 0)
-                    import time
                     if token_expires_at and time.time() < token_expires_at:
                         context['autodesk_token'] = token
                         auth_method = 'IDSDK OAuth Token'
@@ -850,7 +850,6 @@ Example responses:
         2. run mdc on URL https://webpub.autodesk.com/draftr/asset/<assetID> to replace all "<Links>" links to "<new links>"
         3. run mdc on URL https://webpub.autodesk.com/draftr/asset/<assetID> to replace all domain "<domain>" links to "<new domain>"
         """
-        import re
         variables = {}
         
         # Extract asset ID - supports multiple formats
