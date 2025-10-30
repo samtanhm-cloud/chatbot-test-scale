@@ -17,17 +17,17 @@ draftr, save, test, button
 }
 ```
 
-## Step 2: Wait for page load (with time to manually log in)
+## Step 2: PAUSE for manual login (Click OK in the dialog after logging in)
 ```mcp
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "() => new Promise(resolve => setTimeout(resolve, 180000))"
+    "script": "() => { alert('⏸️ AUTOMATION PAUSED\\n\\n🔐 Please log in to Draftr now\\n\\n✅ Click OK when you are logged in and ready to continue'); return 'User confirmed ready'; }"
   }
 }
 ```
 
-## Step 3: Take screenshot before
+## Step 3: Take screenshot (Browser is VISIBLE - Log in manually if needed)
 ```mcp
 {
   "tool": "playwright_screenshot",
