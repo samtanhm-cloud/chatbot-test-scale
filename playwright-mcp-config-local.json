@@ -1,18 +1,28 @@
 {
   "browser": {
+    "channel": "chrome",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": false,
     "args": [
       "--no-sandbox",
-      "--disable-setuid-sandbox"
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage"
     ]
   },
-  "defaultTimeout": 30000,
+  "defaultTimeout": 180000,
   "launchOptions": {
+    "channel": "chrome",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": false,
     "args": [
       "--no-sandbox",
-      "--disable-setuid-sandbox"
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage"
     ]
-  }
+  },
+  "contextOptions": {
+    "storageState": "auth/draftr-session.json"
+  },
+  "navigationTimeout": 180000,
+  "actionTimeout": 180000
 }
-

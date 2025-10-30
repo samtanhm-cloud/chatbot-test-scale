@@ -1,23 +1,26 @@
 {
-  "_comment": "This config is overridden by mdc_executor.js based on environment",
-  "_local_mode": "Visible browser, 3-min timeout for manual login",
-  "_cloud_mode": "Headless browser, automated authentication",
   "browser": {
     "channel": "chrome",
     "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "headless": false,
+    "headless": true,
     "args": [
+      "--headless=new",
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage"
+      "--disable-dev-shm-usage",
+      "--disable-background-networking",
+      "--disable-default-apps",
+      "--no-first-run",
+      "--disable-features=TranslateUI"
     ]
   },
-  "defaultTimeout": 180000,
+  "defaultTimeout": 30000,
   "launchOptions": {
     "channel": "chrome",
     "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "headless": false,
+    "headless": true,
     "args": [
+      "--headless=new",
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage"
@@ -25,8 +28,6 @@
   },
   "contextOptions": {
     "storageState": "auth/draftr-session.json"
-  },
-  "navigationTimeout": 180000,
-  "actionTimeout": 180000
+  }
 }
 

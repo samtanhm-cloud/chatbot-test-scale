@@ -298,24 +298,39 @@ class MDCExecutor {
             // Log what we're starting
             console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
             
-            // Ensure headless mode is set (critical for cloud environments)
-            // Force multiple environment variables for maximum compatibility
+            // Dual configuration: Auto-detect local vs cloud environment
+            // Local: Visible browser with time to manually log in
+            // Cloud: Headless browser with automated authentication
+            const isLocal = !this.isCloud && process.env.STREAMLIT_RUNTIME_ENV !== 'cloud';
+            
+            console.log(`[MCP Server] 🌍 Environment: ${isLocal ? 'LOCAL (visible browser)' : 'CLOUD (headless)'}`);
+            
             const launchOptions = {
                 channel: 'chrome',  // Force Chrome instead of Chromium
                 executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                headless: true,
-                args: [
-                    '--headless=new',
+                headless: !isLocal,  // Local = visible (false), Cloud = headless (true)
+                args: isLocal ? [
+                    // Local: Fewer restrictions, visible browser
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage'
+                ] : [
+                    // Cloud: Full headless mode with all flags
+                    '--headless=new',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--no-first-run',
+                    '--disable-features=TranslateUI'
                 ]
             };
             
             const env = {
                 ...process.env,
-                // Playwright-specific
-                PLAYWRIGHT_HEADLESS: '1',
+                // Playwright-specific (environment-aware)
+                PLAYWRIGHT_HEADLESS: isLocal ? '0' : '1',  // Local: 0 (visible), Cloud: 1 (headless)
                 PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1',
                 // CRITICAL: Force local browser path (0 = use node_modules/.local-browsers/)
                 PLAYWRIGHT_BROWSERS_PATH: '0',
@@ -328,25 +343,29 @@ class MDCExecutor {
                 // Pass launch options as JSON (some MCP servers read this)
                 PLAYWRIGHT_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
                 BROWSER_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
-                // Generic browser flags
-                BROWSER_HEADLESS: 'true',
-                HEADLESS: 'true',
+                // Generic browser flags (environment-aware)
+                BROWSER_HEADLESS: isLocal ? 'false' : 'true',
+                HEADLESS: isLocal ? 'false' : 'true',
                 // Chrome-specific
-                CHROME_HEADLESS: 'true',
-                CHROMIUM_FLAGS: '--headless=new --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
+                CHROME_HEADLESS: isLocal ? 'false' : 'true',
+                CHROMIUM_FLAGS: isLocal 
+                    ? '--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage'
+                    : '--headless=new --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
                 // Additional stability flags
                 NO_SANDBOX: 'true',
-                DISABLE_GPU: 'true'
+                DISABLE_GPU: isLocal ? 'false' : 'true'
             };
             
-            console.log(`[MCP Server] Environment configured:`);
-            console.log(`[MCP Server]   🌐 CHROME_EXECUTABLE_PATH: ${env.CHROME_EXECUTABLE_PATH} ← MCP server reads THIS!`);
-            console.log(`[MCP Server]   PLAYWRIGHT_BROWSER_CHANNEL: ${env.PLAYWRIGHT_BROWSER_CHANNEL}`);
-            console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
+            console.log(`[MCP Server] ==========================================`);
+            console.log(`[MCP Server] Environment: ${isLocal ? '🏠 LOCAL' : '☁️  CLOUD'}`);
+            console.log(`[MCP Server] ==========================================`);
+            console.log(`[MCP Server]   Browser Mode: ${isLocal ? '👁️  VISIBLE (3-min manual login)' : '🔒 HEADLESS (automated)'}`);
+            console.log(`[MCP Server]   🌐 CHROME_EXECUTABLE_PATH: ${env.CHROME_EXECUTABLE_PATH}`);
+            console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS} (${isLocal ? 'visible' : 'headless'})`);
             console.log(`[MCP Server]   PLAYWRIGHT_BROWSERS_PATH: ${env.PLAYWRIGHT_BROWSERS_PATH} (0=local)`);
             console.log(`[MCP Server]   PLAYWRIGHT_LAUNCH_OPTIONS: ${env.PLAYWRIGHT_LAUNCH_OPTIONS}`);
             console.log(`[MCP Server]   DISPLAY: ${env.DISPLAY || 'not set'}`);
-            console.log(`[MCP Server]   NO_SANDBOX: ${env.NO_SANDBOX}`);
+            console.log(`[MCP Server] ==========================================`);
             
             // Create MCP client
             this.mcpClient = new Client({
