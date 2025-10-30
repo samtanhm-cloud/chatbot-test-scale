@@ -17,7 +17,7 @@ draftr, link, update, email, automation, variable, template
 ### Step 1.1: Navigate to Draftr asset
 ```mcp
 {
-  "tool": "playwright_navigate",
+  "tool": "browser_navigate",
   "params": {
     "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
   }
@@ -27,9 +27,9 @@ draftr, link, update, email, automation, variable, template
 ### Step 1.2: Wait for page load (with time to manually log in)
 ```mcp
 {
-  "tool": "playwright_evaluate",
+  "tool": "browser_evaluate",
   "params": {
-    "script": "() => new Promise(resolve => setTimeout(resolve, 180000))"
+    "function": "() => new Promise(resolve => setTimeout(resolve, 180000))"
   }
 }
 ```
