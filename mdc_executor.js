@@ -171,6 +171,18 @@ class MDCExecutor {
             // Log what we're starting
             console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
             
+            // Ensure headless mode is set (critical for cloud environments)
+            const env = {
+                ...process.env,
+                PLAYWRIGHT_HEADLESS: '1',
+                BROWSER_HEADLESS: 'true',
+                HEADLESS: 'true',
+                PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1'
+            };
+            
+            console.log(`[MCP Server] Headless mode: ${env.PLAYWRIGHT_HEADLESS}`);
+            console.log(`[MCP Server] Display: ${env.DISPLAY || 'not set'}`);
+            
             // Create MCP client
             this.mcpClient = new Client({
                 name: 'mdc-executor',
@@ -184,7 +196,8 @@ class MDCExecutor {
             // Create transport (SDK will spawn and manage the process internally)
             const transport = new StdioClientTransport({
                 command: this.mcpServerPath,
-                args: this.mcpServerArgs
+                args: this.mcpServerArgs,
+                env: env  // Pass environment variables including headless config
             });
             
             // Connect the client

@@ -515,7 +515,7 @@ class MDCExecutor:
             if context:
                 cmd.extend(["--context", json.dumps(context)])
             
-            # Prepare environment with DISPLAY variable
+            # Prepare environment with DISPLAY variable and headless config
             env = os.environ.copy()
             
             # Ensure DISPLAY is set for browser automation
@@ -523,8 +523,17 @@ class MDCExecutor:
                 env['DISPLAY'] = ':99'
                 print(f"🔧 Setting DISPLAY={env['DISPLAY']} for subprocess")
             
+            # Force Playwright to run in headless mode (critical for cloud)
+            env['PLAYWRIGHT_HEADLESS'] = '1'
+            env['BROWSER_HEADLESS'] = 'true'
+            env['HEADLESS'] = 'true'
+            
+            # Additional Playwright browser args for stability
+            env['PLAYWRIGHT_CHROMIUM_NO_SANDBOX'] = '1'
+            
             print(f"🚀 Executing: {' '.join(cmd)}")
             print(f"📺 DISPLAY={env.get('DISPLAY', 'NOT SET')}")
+            print(f"🎭 HEADLESS={env.get('PLAYWRIGHT_HEADLESS', 'NOT SET')}")
             
             # Execute with explicit environment
             result = subprocess.run(
