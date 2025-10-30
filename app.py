@@ -372,12 +372,26 @@ class MDCExecutor:
                 mdc_content = f.read()
             
             # Prepare execution command
-            # This assumes you have a Node.js script that can execute MDC with MCP
-            cmd = [
-                "node",
-                "mdc_executor.js",
-                mdc_path
-            ]
+            # Use xvfb-run to wrap the command on Streamlit Cloud
+            is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
+            
+            if is_cloud:
+                # Wrap with xvfb-run to provide X server
+                cmd = [
+                    "xvfb-run",
+                    "--auto-servernum",
+                    "--server-args=-screen 0 1920x1080x24",
+                    "node",
+                    "mdc_executor.js",
+                    mdc_path
+                ]
+            else:
+                # Local execution without xvfb-run
+                cmd = [
+                    "node",
+                    "mdc_executor.js",
+                    mdc_path
+                ]
             
             # Add context if provided
             if context:
