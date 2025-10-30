@@ -28,50 +28,34 @@ def ensure_npm_packages():
     # Check if running on Streamlit Cloud
     is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
     
-    # Setup virtual display for headless browser (Streamlit Cloud has no X server)
+    # Setup virtual display for browser automation (Streamlit Cloud has no X server)
     if is_cloud:
-        print("🔍 Checking virtual display setup...")
-        print(f"   Current DISPLAY: {os.getenv('DISPLAY', 'NOT SET')}")
+        print("🔍 Setting up virtual display for browser automation...")
         
-        if not os.getenv('DISPLAY'):
-            try:
-                # Start Xvfb (virtual framebuffer X server)
-                print("🚀 Starting Xvfb virtual display...")
-                xvfb_process = subprocess.Popen(
-                    ['Xvfb', ':99', '-screen', '0', '1280x1024x24', '-ac', '+extension', 'GLX', '+render', '-noreset'], 
-                    stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE
+        # Set DISPLAY environment variable for all subprocesses
+        os.environ['DISPLAY'] = ':99'
+        
+        # Start Xvfb in background if not already running
+        try:
+            # Check if Xvfb is already running
+            check_xvfb = subprocess.run(['pgrep', 'Xvfb'], capture_output=True)
+            if check_xvfb.returncode != 0:
+                # Start Xvfb in background
+                print("   Starting Xvfb virtual display...")
+                subprocess.Popen(
+                    ['Xvfb', ':99', '-screen', '0', '1920x1080x24', '-nolisten', 'tcp'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
                 )
-                
-                # Set DISPLAY for this process AND all subprocesses
-                os.environ['DISPLAY'] = ':99'
-                
-                # Also set in Streamlit's environment
-                import streamlit as st
-                if hasattr(st, 'session_state'):
-                    st.session_state['DISPLAY'] = ':99'
-                
-                print("✅ Virtual display started (DISPLAY=:99)")
-                print(f"   Xvfb PID: {xvfb_process.pid}")
-                
-                # Give Xvfb time to initialize
-                time.sleep(2)
-                
-                # Verify Xvfb is running
-                if xvfb_process.poll() is None:
-                    print("✅ Xvfb process is running")
-                else:
-                    stderr_output = xvfb_process.stderr.read().decode() if xvfb_process.stderr else "No error output"
-                    print(f"❌ Xvfb process died: {stderr_output}")
-                    
-            except FileNotFoundError:
-                print("❌ Xvfb not found - check packages.txt includes 'xvfb'")
-            except Exception as e:
-                print(f"❌ Could not start virtual display: {e}")
-                import traceback
-                print(traceback.format_exc())
-        else:
-            print(f"✅ DISPLAY already set: {os.getenv('DISPLAY')}")
+                time.sleep(2)  # Give Xvfb time to start
+                print("   ✅ Xvfb started on DISPLAY=:99")
+            else:
+                print("   ✅ Xvfb already running on DISPLAY=:99")
+        except Exception as e:
+            print(f"   ⚠️  Could not start Xvfb: {e}")
+            print("   Attempting to continue anyway...")
+        
+        print(f"✅ Virtual display configured: DISPLAY={os.getenv('DISPLAY')}")
     
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
