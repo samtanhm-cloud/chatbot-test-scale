@@ -7,9 +7,10 @@ Tests that browser automation works end-to-end.
 ### Step 1: Navigate to example.com
 ```mcp
 {
-  "tool": "browser_navigate",
+  "tool": "Playwright_navigate",
   "params": {
-    "url": "https://example.com"
+    "url": "https://example.com",
+    "headless": true
   }
 }
 ```
@@ -17,18 +18,20 @@ Tests that browser automation works end-to-end.
 ### Step 2: Take a screenshot
 ```mcp
 {
-  "tool": "browser_take_screenshot",
+  "tool": "Playwright_screenshot",
   "params": {
-    "filename": "test-page.png",
-    "type": "png"
+    "name": "test-page",
+    "width": 800,
+    "height": 600,
+    "savePng": true
   }
 }
 ```
 
-### Step 3: Get page snapshot
+### Step 3: Get visible text
 ```mcp
 {
-  "tool": "browser_snapshot",
+  "tool": "playwright_get_visible_text",
   "params": {}
 }
 ```

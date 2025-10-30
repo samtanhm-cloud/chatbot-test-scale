@@ -1,13 +1,35 @@
-# MCP Tool Name Test
+# Playwright MCP Tool Reference Test
 
-Testing different tool naming patterns to find what works.
+Testing the correct tool names based on official documentation.
 
-## Test 1: Try mcp_playwright-extension prefix
+## Test 1: Navigate to a website
 ```mcp
 {
-  "tool": "mcp_playwright-extension_browser_navigate",
+  "tool": "Playwright_navigate",
   "params": {
-    "url": "https://example.com"
+    "url": "https://example.com",
+    "headless": true
+  }
+}
+```
+
+## Test 2: Get visible text
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+## Test 3: Take a screenshot
+```mcp
+{
+  "tool": "Playwright_screenshot",
+  "params": {
+    "name": "example-page",
+    "width": 1280,
+    "height": 720,
+    "savePng": true
   }
 }
 ```
