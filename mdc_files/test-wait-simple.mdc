@@ -1,0 +1,51 @@
+# Simple Wait Test
+
+Test that wait/evaluate commands work correctly.
+
+## Test 1: Navigate to example.com
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://example.com"
+  }
+}
+```
+
+## Test 2: Wait 2 seconds
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+## Test 3: Get page title
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => document.title"
+  }
+}
+```
+
+## Test 4: Get visible text
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+## Test 5: Take screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "after-wait-test"
+  }
+}
+```
