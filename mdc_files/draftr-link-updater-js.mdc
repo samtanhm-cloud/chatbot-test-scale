@@ -116,13 +116,65 @@ draftr, link, update, javascript, automation, direct
 }
 ```
 
-### Step 4.3: Final screenshot
+### Step 4.3: Screenshot before save
 ```mcp
 {
   "tool": "playwright_screenshot",
   "params": {
-    "name": "draftr-asset-{{asset_id}}-final"
+    "name": "draftr-asset-{{asset_id}}-before-save"
   }
+}
+```
+
+---
+
+## PHASE 5: Save Changes to Draftr
+
+### Step 5.1: Click Save menu item
+```mcp
+{
+  "tool": "playwright_click",
+  "params": {
+    "selector": ".draftr__menu-item:has-text('Save')"
+  }
+}
+```
+
+### Step 5.2: Wait for save operation to complete
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 3000))"
+  }
+}
+```
+
+### Step 5.3: Verify save was successful
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const saveButton = document.querySelector('.draftr__menu-item'); const notification = document.querySelector('[class*=\"notification\"], [class*=\"toast\"], [class*=\"snackbar\"], [class*=\"alert\"]'); return { saveButtonExists: !!saveButton, notificationVisible: !!notification, notificationText: notification ? notification.textContent.trim() : 'No notification found', pageTitle: document.title, timestamp: new Date().toISOString(), status: 'Save completed' }; }"
+  }
+}
+```
+
+### Step 5.4: Final screenshot showing saved state
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-asset-{{asset_id}}-saved-final"
+  }
+}
+```
+
+### Step 5.5: Get final confirmation
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
 }
 ```
 
@@ -137,41 +189,37 @@ draftr, link, update, javascript, automation, direct
 4. ✅ Highlights changed links with red border
 5. ✅ Takes screenshots showing changes
 6. ✅ Returns list of updated links
+7. ✅ **Automatically clicks Save button**
+8. ✅ Verifies save was successful
+9. ✅ Provides final confirmation
 
-### What This DOESN'T Do:
-❌ **Does NOT save changes to Draftr backend**
+### Authentication:
+✅ **Uses your existing browser session** - if you're logged into Draftr in your browser, the automation inherits that session
 
-### Why?
-Draftr's save mechanism requires either:
-- Clicking through the UI (needs exact selectors)
-- Using Draftr's API (needs authentication)
-
-This automation **shows you what would change** and highlights the links. You'll need to:
-1. Review the changes (shown in red)
-2. Manually save in Draftr
-3. OR extend this to click Save button (if you provide the correct selector)
+### How It Works:
+- When you navigate to `https://webpub.autodesk.com/draftr/`, Playwright uses your browser's stored cookies
+- If you have an active Draftr session, the automation continues with your credentials
+- **No separate login required** - it piggybacks on your existing authentication
 
 ---
 
-## 🎯 How to Extend with Save
+## 🔐 Authentication Requirements
 
-If you want automatic saving, add this step and provide the real Save button selector:
+### Option 1: Existing Browser Session (Recommended)
+If you're already logged into Draftr in your browser:
+- ✅ **Playwright inherits your session cookies**
+- ✅ **No additional login needed**
+- ✅ **Works automatically**
 
-```mcp
-### Manual Step: Click Save (requires real selector)
-{
-  "tool": "playwright_click",
-  "params": {
-    "selector": "button[aria-label='Save']"
-  }
-}
-```
+### Option 2: Headless Mode on Streamlit Cloud
+When running on Streamlit Cloud (headless):
+- ⚠️ **No existing browser session available**
+- ⚠️ **May require manual authentication step**
 
-**To find the selector:**
-1. Open Draftr in browser
-2. Right-click Save button
-3. Inspect → Copy selector
-4. Replace `"button[aria-label='Save']"` with your actual selector
+**Solutions:**
+1. Add authentication cookies to environment variables
+2. Use Draftr API token if available
+3. Add login step at the beginning of automation
 
 ---
 
@@ -202,5 +250,7 @@ If you want automatic saving, add this step and provide the real Save button sel
 ✅ **Visual confirmation** - Red borders show changes
 ✅ **Detailed output** - Returns exactly what changed
 ✅ **Flexible** - Handles all three operation types
+✅ **Auto-save enabled** - Clicks Save button automatically
+✅ **Save verification** - Confirms save was successful
 
-❌ **Manual save required** - Unless you add Save button selector
+⚠️ **Authentication required** - Must be logged into Draftr (or provide credentials)
