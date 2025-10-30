@@ -1,0 +1,63 @@
+# Draftr Quick Test (5 Commands)
+
+Quick test to verify Draftr access and browser automation works.
+
+## Keywords
+draftr, test, quick, verify
+
+---
+
+## Step 1: Navigate to Draftr
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/"
+  }
+}
+```
+
+## Step 2: Wait for page
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
+
+## Step 3: Take snapshot
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+## Step 4: Take screenshot
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "draftr-loaded.png",
+    "type": "png"
+  }
+}
+```
+
+## Step 5: Extract page title
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { return { title: document.title, url: window.location.href, ready: document.readyState }; }"
+  }
+}
+```
+
+## Expected Result
+- Navigates to Draftr
+- Waits 5 seconds
+- Takes snapshot and screenshot
+- Returns page title and URL

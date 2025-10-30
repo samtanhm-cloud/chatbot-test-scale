@@ -1,0 +1,91 @@
+# Sample Link Validator Automation
+
+This is a sample MDC file that demonstrates link validation using Playwright MCP.
+
+## Description
+Validates links on a webpage by navigating to it and checking for broken links.
+
+## Parameters
+- url: The webpage URL to validate
+- check_external: Whether to check external links (default: false)
+
+## Steps
+
+### Step 1: Navigate to the page
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://www.example.com"
+  }
+}
+```
+
+### Step 2: Take a snapshot of the page
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 3: Find all links on the page
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { return Array.from(document.querySelectorAll('a')).map(a => ({ text: a.textContent, href: a.href })); }"
+  }
+}
+```
+
+### Step 4: Click on a specific link to test
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Documentation link",
+    "ref": "a[href='/docs']"
+  },
+  "optional": true
+}
+```
+
+### Step 5: Wait for navigation to complete
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
+```
+
+### Step 6: Take final screenshot
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "validation_result.png",
+    "type": "png"
+  }
+}
+```
+
+### Step 7: Close the browser
+```mcp
+{
+  "tool": "browser_close",
+  "params": {}
+}
+```
+
+## Expected Output
+- List of all links found
+- Screenshot of the final page state
+- Validation status for each link
+
+## Notes
+- This is a simplified example
+- In production, add error handling
+- Consider rate limiting for external links

@@ -1,0 +1,56 @@
+# Test Navigation - Simple MCP Test
+
+This is a simple test automation to verify the LLM → MDC → MCP pipeline works.
+
+## Description
+Navigates to example.com and takes a screenshot. Simple test to verify MCP integration.
+
+## Keywords
+test, navigation, simple, example, verify
+
+## Steps
+
+### Step 1: Navigate to Example.com
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://example.com"
+  }
+}
+```
+
+### Step 2: Wait for page load
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
+```
+
+### Step 3: Take a snapshot
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 4: Take a screenshot
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "test_result.png",
+    "type": "png"
+  }
+}
+```
+
+## Expected Result
+- Should navigate to example.com
+- Should wait 2 seconds
+- Should capture page snapshot
+- Should save screenshot as test_result.png

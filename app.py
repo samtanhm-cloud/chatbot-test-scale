@@ -18,56 +18,68 @@ from datetime import datetime, timedelta
 # ============================================================================
 # NPM INSTALL CHECK - Install MCP SDK if not present
 # ============================================================================
-def ensure_npm_packages():
+def setup_virtual_display():
     """
-    Ensure npm packages and Playwright browsers are installed before app starts.
-    This is needed because Streamlit Cloud doesn't automatically run npm install.
+    Setup virtual display for browser automation on Streamlit Cloud.
+    This is lightweight and safe to run at import time.
     """
-    import sys
-    
     # Check if running on Streamlit Cloud
     is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
     
     # Setup virtual display for browser automation (Streamlit Cloud has no X server)
     if is_cloud:
-        print("🔍 Setting up virtual display for browser automation...")
-        
         # Set DISPLAY environment variable for all subprocesses
         os.environ['DISPLAY'] = ':99'
         
         # Start Xvfb in background if not already running
         try:
             # Check if Xvfb is already running
-            check_xvfb = subprocess.run(['pgrep', 'Xvfb'], capture_output=True)
+            check_xvfb = subprocess.run(['pgrep', 'Xvfb'], capture_output=True, timeout=5)
             if check_xvfb.returncode != 0:
                 # Start Xvfb in background
-                print("   Starting Xvfb virtual display...")
                 subprocess.Popen(
                     ['Xvfb', ':99', '-screen', '0', '1920x1080x24', '-nolisten', 'tcp'],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
                 )
-                time.sleep(2)  # Give Xvfb time to start
-                print("   ✅ Xvfb started on DISPLAY=:99")
-            else:
-                print("   ✅ Xvfb already running on DISPLAY=:99")
-        except Exception as e:
-            print(f"   ⚠️  Could not start Xvfb: {e}")
-            print("   Attempting to continue anyway...")
-        
-        print(f"✅ Virtual display configured: DISPLAY={os.getenv('DISPLAY')}")
+                time.sleep(1)  # Give Xvfb time to start
+        except Exception:
+            pass  # Xvfb might already be running or not needed
+
+def check_dependencies():
+    """
+    Quick check if dependencies are installed. Non-blocking.
+    Returns status dict.
+    """
+    node_modules_path = Path(__file__).parent / 'node_modules'
+    mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
+    playwright_marker = Path(__file__).parent / '.playwright_installed'
+    
+    return {
+        'npm_packages': mcp_sdk_path.exists(),
+        'playwright': playwright_marker.exists(),
+        'display': os.getenv('DISPLAY') is not None
+    }
+
+def install_dependencies_if_needed():
+    """
+    Install npm packages and Playwright browsers if not present.
+    This should be called lazily, not at import time.
+    Returns True if successful or already installed, False otherwise.
+    """
+    deps = check_dependencies()
+    
+    if deps['npm_packages'] and deps['playwright']:
+        return True  # Already installed
     
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
     mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
     playwright_marker = Path(__file__).parent / '.playwright_installed'
     
-    # Check if MCP SDK is installed
+    # Install npm packages if needed
     if not mcp_sdk_path.exists():
-        print("⚠️  MCP SDK not found, installing npm packages...")
-        
         try:
-            # Run npm install
             result = subprocess.run(
                 ['npm', 'install', '--production', '--prefer-offline'],
                 cwd=Path(__file__).parent,
@@ -76,63 +88,33 @@ def ensure_npm_packages():
                 timeout=300  # 5 minute timeout
             )
             
-            if result.returncode == 0:
-                print("✅ npm packages installed successfully")
-                print(result.stdout)
-            else:
-                print(f"❌ npm install failed: {result.stderr}")
-                # Continue anyway - app might still work in degraded mode
-        except subprocess.TimeoutExpired:
-            print("⚠️  npm install timed out after 5 minutes")
-        except FileNotFoundError:
-            print("❌ npm not found - Node.js may not be installed")
-        except Exception as e:
-            print(f"❌ Error installing npm packages: {e}")
-    else:
-        print("✅ MCP SDK already installed")
+            if result.returncode != 0:
+                return False
+        except Exception:
+            return False
     
-    # Install Playwright browsers if not already installed
+    # Install Playwright browsers if needed
     if not playwright_marker.exists():
-        print("⚠️  Installing Playwright browsers (chromium)...")
-        
         try:
-            # Install Playwright browsers
             result = subprocess.run(
-                ['npx', 'playwright', 'install', 'chromium', '--with-deps'],
+                ['npx', 'playwright', 'install', 'chromium'],
                 cwd=Path(__file__).parent,
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 minute timeout for browser download
+                timeout=300  # Reduced timeout
             )
             
             if result.returncode == 0:
-                print("✅ Playwright browsers installed successfully")
-                # Create marker file
                 playwright_marker.touch()
             else:
-                print(f"⚠️  Playwright install warning: {result.stderr}")
-                # Try without --with-deps (deps already in packages.txt)
-                result2 = subprocess.run(
-                    ['npx', 'playwright', 'install', 'chromium'],
-                    cwd=Path(__file__).parent,
-                    capture_output=True,
-                    text=True,
-                    timeout=600
-                )
-                if result2.returncode == 0:
-                    print("✅ Playwright chromium installed")
-                    playwright_marker.touch()
-        except subprocess.TimeoutExpired:
-            print("⚠️  Playwright install timed out after 10 minutes")
-        except FileNotFoundError:
-            print("❌ npx not found")
-        except Exception as e:
-            print(f"❌ Error installing Playwright: {e}")
-    else:
-        print("✅ Playwright browsers already installed")
+                return False
+        except Exception:
+            return False
+    
+    return True
 
-# Install npm packages on first run
-ensure_npm_packages()
+# Setup virtual display at import time (fast, non-blocking)
+setup_virtual_display()
 
 # Page configuration
 st.set_page_config(
@@ -917,6 +899,9 @@ def main():
         # System status
         st.subheader("🔧 System Status")
         
+        # Check dependencies
+        deps = check_dependencies()
+        
         # Check API credentials
         api_type = os.getenv("OPENAI_API_TYPE", "").lower()
         if api_type == "azure_ad":
@@ -926,6 +911,23 @@ def main():
         
         api_status = "🟢 AI Connected" if has_creds else "🟡 Fallback Mode"
         st.write(f"**AI Service:** {api_status}")
+        
+        # NPM/Playwright status
+        npm_status = "🟢 Installed" if deps['npm_packages'] else "🟡 Missing"
+        playwright_status = "🟢 Ready" if deps['playwright'] else "🟡 Missing"
+        st.write(f"**NPM Packages:** {npm_status}")
+        st.write(f"**Playwright:** {playwright_status}")
+        
+        # Show setup button if dependencies missing
+        if not deps['npm_packages'] or not deps['playwright']:
+            if st.button("🔧 Install Dependencies", type="primary"):
+                with st.spinner("Installing dependencies... This may take 3-5 minutes..."):
+                    success = install_dependencies_if_needed()
+                    if success:
+                        st.success("✅ Dependencies installed successfully!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to install dependencies. Check logs.")
         
         # Check MCP server
         mcp_status = "🟢 Ready" if os.getenv("MCP_SERVER_URL") else "🟢 Local"

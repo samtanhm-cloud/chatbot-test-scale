@@ -1,0 +1,407 @@
+# Draftr Link Updater Automation
+
+**Permanently updates links in Draftr email assets**
+
+## 🎯 What This Does
+- Authenticates to Draftr system
+- Navigates to specific asset by ID
+- Finds links matching your criteria
+- Updates link URLs permanently
+- Saves changes to Draftr backend
+- Verifies successful updates
+
+## 💡 Key Capabilities
+✅ Update by Pattern (domain change)
+✅ Update by specific URL
+✅ Update by anchor text
+✅ Permanent changes saved to backend
+✅ Verification with reload
+
+## 📋 Required Inputs
+- Draftr URL: https://webpub.autodesk.com/draftr/
+- Asset ID: e.g., 3934202
+- Old URL pattern or specific URL
+- New URL to replace
+
+## Keywords
+draftr, link, update, email, automation, anchor, url, replace, save
+
+---
+
+## PHASE 1: Authentication & Setup
+
+### Step 1.1: Navigate to Draftr
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/"
+  }
+}
+```
+
+### Step 1.2: Wait for page load
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
+
+### Step 1.3: Take snapshot to check authentication
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 1.4: Screenshot of login/dashboard
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "draftr-auth-check.png",
+    "type": "png"
+  }
+}
+```
+
+---
+
+## PHASE 2: Asset Navigation & Link Discovery
+
+### Step 2.1: Navigate to specific asset
+**Note: Replace 3934202 with your actual asset ID**
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/3934202"
+  }
+}
+```
+
+### Step 2.2: Wait for asset to load
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
+
+### Step 2.3: Take snapshot of asset page
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 2.4: Extract all links from asset
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), id: a.id || '' }); }); return { totalLinks: links.length, links: links, assetId: window.location.pathname.split('/').pop() }; }"
+  }
+}
+```
+
+### Step 2.5: Screenshot before editing
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "asset-before-edit.png",
+    "type": "png"
+  }
+}
+```
+
+---
+
+## PHASE 3: Enter Edit Mode & Identify Links
+
+### Step 3.1: Look for Edit button or panel
+**Note: Adjust selector based on actual Draftr interface**
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 3.2: Click on panel containing link
+**Example: Click on first panel/section with links**
+**Note: Update 'ref' with actual element reference from snapshot**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Panel with Primary CTA",
+    "ref": "div[data-panel-id]"
+  }
+}
+```
+
+### Step 3.3: Wait for panel editor to open
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
+```
+
+### Step 3.4: Take snapshot of opened panel editor
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+---
+
+## PHASE 4: Update Links (CRITICAL WORKFLOW)
+
+### Step 4.1: Click on link input field
+**Note: Update 'ref' with actual input field from panel editor**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Primary CTA Link input field",
+    "ref": "input[name*='link'], input[name*='url'], input[name*='href']"
+  }
+}
+```
+
+### Step 4.2: Select all existing text (Cmd+A on Mac, Ctrl+A on Windows)
+```mcp
+{
+  "tool": "browser_press_key",
+  "params": {
+    "key": "ControlOrMeta+a"
+  }
+}
+```
+
+### Step 4.3: Type new URL
+**Note: Replace with your actual new URL**
+```mcp
+{
+  "tool": "browser_type",
+  "params": {
+    "element": "Link input field",
+    "ref": "input[name*='link'], input[name*='url']",
+    "text": "https://www.autodesk.com/support/new-page"
+  }
+}
+```
+
+### Step 4.4: ⚠️ CRITICAL - Press Enter to commit change
+**This triggers Draftr's auto-save for the field**
+**WITHOUT this step, changes will NOT persist!**
+```mcp
+{
+  "tool": "browser_press_key",
+  "params": {
+    "key": "Enter"
+  }
+}
+```
+
+### Step 4.5: Wait for auto-save indicator
+**Look for "Saved at HH:MM:SS" timestamp update**
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 2
+  }
+}
+```
+
+### Step 4.6: Take snapshot to verify panel change
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 4.7: Screenshot after update
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "link-updated-in-panel.png",
+    "type": "png"
+  }
+}
+```
+
+---
+
+## PHASE 5: Save to Draftr Backend
+
+### Step 5.1: Click main Save button (top toolbar)
+**This saves ALL panel changes to Draftr database**
+**Note: Update 'ref' with actual Save button selector**
+```mcp
+{
+  "tool": "browser_click",
+  "params": {
+    "element": "Main Save button",
+    "ref": "button[aria-label*='Save'], button:has-text('Save')"
+  }
+}
+```
+
+### Step 5.2: Wait for save confirmation
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 3
+  }
+}
+```
+
+### Step 5.3: Look for success notification
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 5.4: Screenshot of save confirmation
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "asset-saved-confirmation.png",
+    "type": "png"
+  }
+}
+```
+
+---
+
+## PHASE 6: Verification (Reload & Recheck)
+
+### Step 6.1: Reload asset page to verify persistence
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/3934202"
+  }
+}
+```
+
+### Step 6.2: Wait for page reload
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 5
+  }
+}
+```
+
+### Step 6.3: Re-extract links to verify updates
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalLinks: links.length, links: links, verification: 'Reloaded and re-extracted' }; }"
+  }
+}
+```
+
+### Step 6.4: Take verification snapshot
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+}
+```
+
+### Step 6.5: Final screenshot showing updated links
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "verification-after-reload.png",
+    "type": "png"
+  }
+}
+```
+
+---
+
+## 📝 Expected Results
+
+After execution, you should have:
+1. ✅ Navigated to Draftr asset
+2. ✅ Extracted all links (before update)
+3. ✅ Opened panel editor
+4. ✅ Updated link URL with Press Enter
+5. ✅ Saved changes to backend
+6. ✅ Verified changes persisted after reload
+7. ✅ Screenshots at each major step
+8. ✅ Link data extracted before and after
+
+## ⚠️ Critical Notes
+
+**Why "Press Enter" is Essential:**
+- ❌ Just filling + Tab = Changes revert
+- ❌ Just filling + click away = Changes revert
+- ✅ Filling + Press Enter = Changes committed
+- ✅ Then main Save = Changes persisted to database
+
+**Verification is Crucial:**
+- Always reload page after saving
+- Re-extract links to confirm
+- Compare before/after link data
+- Check for "Asset Saved" notification
+
+## 🔧 Customization Points
+
+Update these for your specific use case:
+
+1. **Asset ID**: Line 80 - Replace `3934202` with your asset ID
+2. **New URL**: Line 162 - Replace with your target URL
+3. **Element selectors**: Update `ref` values based on actual Draftr interface
+4. **Multiple links**: Repeat Steps 4.1-4.7 for each link to update
+
+## 📊 Success Indicators
+
+- ✅ "Saved at HH:MM:SS" timestamp updates after Enter
+- ✅ "Asset Saved" notification after main Save
+- ✅ New URL appears in preview after panel edit
+- ✅ New URL persists after page reload
+- ✅ No "unsaved changes" warning
+
+## 🚨 Troubleshooting
+
+**If changes don't save:**
+- Ensure you pressed Enter after typing new URL
+- Check for auto-save timestamp update
+- Verify Save button was clicked (not just panel save)
+- Reload and check if changes persisted
+
+**If automation fails:**
+- Check authentication (may need manual login)
+- Verify asset ID is correct
+- Update element selectors (`ref`) from snapshots
+- Check browser console for errors
