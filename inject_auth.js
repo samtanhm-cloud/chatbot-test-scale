@@ -66,9 +66,9 @@ const injectionScript = `async () => {
 console.log('Use this in your MDC file:');
 console.log('```mcp');
 console.log('{');
-console.log('  "tool": "browser_evaluate",');
+console.log('  "tool": "playwright_evaluate",');
 console.log('  "params": {');
-console.log(`    "function": "${injectionScript.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
+console.log(`    "script": "${injectionScript.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`);
 console.log('  }');
 console.log('}');
 console.log('```\n');
@@ -76,9 +76,9 @@ console.log('```\n');
 console.log('Or save to file:');
 const outputFile = path.join(__dirname, 'cookie-injection.json');
 fs.writeFileSync(outputFile, JSON.stringify({
-    tool: 'browser_evaluate',
+    tool: 'playwright_evaluate',
     params: {
-        function: injectionScript
+        script: injectionScript
     }
 }, null, 2));
 
