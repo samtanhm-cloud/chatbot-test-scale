@@ -1120,12 +1120,28 @@ def main():
                         # Display results
                         if result['success']:
                             st.success("✅ Automation completed successfully!")
-                            st.subheader("📋 Output")
-                            st.code(result['output'], language='text')
+                            
+                            # Show output (stdout)
+                            if result.get('output'):
+                                st.subheader("📋 Execution Log")
+                                st.code(result['output'], language='text')
+                            
+                            # Show any warnings/errors (stderr) even on success
+                            if result.get('error'):
+                                with st.expander("⚠️ Warnings & Debug Info"):
+                                    st.code(result['error'], language='text')
                         else:
                             st.error("❌ Automation failed")
-                            st.subheader("🐛 Error Details")
-                            st.code(result['error'], language='text')
+                            
+                            # Show error details (stderr)
+                            if result.get('error'):
+                                st.subheader("🐛 Error Details")
+                                st.code(result['error'], language='text')
+                            
+                            # Show any output (stdout) even on failure
+                            if result.get('output'):
+                                with st.expander("📋 Execution Log"):
+                                    st.code(result['output'], language='text')
         
         # Analyze only (don't execute)
         elif analyze_btn and user_prompt:

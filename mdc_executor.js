@@ -478,6 +478,28 @@ async function main() {
     const executor = new MDCExecutor();
     const result = await executor.executeMDC(mdcFilePath, context);
     
+    // Print final summary
+    console.log('\n' + '='.repeat(60));
+    if (result.success) {
+        console.log('✅ AUTOMATION COMPLETED SUCCESSFULLY');
+        console.log('='.repeat(60));
+        console.log(`Total commands: ${result.total_commands || 0}`);
+        console.log(`Successful: ${result.successful || 0}`);
+        console.log(`Failed: ${result.failed || 0}`);
+        console.log(`Duration: ${result.total_duration_ms || 0}ms`);
+        console.log(`Timestamp: ${result.timestamp || 'N/A'}`);
+    } else {
+        console.log('❌ AUTOMATION FAILED');
+        console.log('='.repeat(60));
+        console.log(`Total commands: ${result.total_commands || 0}`);
+        console.log(`Successful: ${result.successful || 0}`);
+        console.log(`Failed: ${result.failed || 0}`);
+        if (result.error) {
+            console.error(`Error: ${result.error}`);
+        }
+    }
+    console.log('='.repeat(60) + '\n');
+    
     // Exit with appropriate code
     process.exit(result.success ? 0 : 1);
 }
