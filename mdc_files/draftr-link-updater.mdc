@@ -17,19 +17,19 @@ draftr, link, update, email, automation, variable, template
 ### Step 1.1: Navigate to Draftr asset
 ```mcp
 {
-  "tool": "browser_navigate",
+  "tool": "playwright_navigate",
   "params": {
     "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
   }
 }
 ```
 
-### Step 1.2: Wait for page load (with time to manually log in)
+### Step 1.2: PAUSE for manual login (Browser opens VISIBLE - Click OK after logging in)
 ```mcp
 {
-  "tool": "browser_evaluate",
+  "tool": "playwright_evaluate",
   "params": {
-    "function": "() => new Promise(resolve => setTimeout(resolve, 180000))"
+    "script": "() => { alert('⏸️ AUTOMATION PAUSED\\n\\n🔐 Please log in to Draftr now\\n\\n✅ Click OK when logged in and ready to continue'); return 'User ready to continue'; }"
   }
 }
 ```
