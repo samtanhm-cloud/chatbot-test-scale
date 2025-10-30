@@ -270,12 +270,11 @@ class MDCExecutor {
             const toolsList = await this.mcpClient.listTools();
             console.log(`[MCP Server] Available tools: ${toolsList.tools.length}`);
             
-            // Show tool names if not too many
-            if (toolsList.tools.length > 0 && toolsList.tools.length < 20) {
-                toolsList.tools.forEach(tool => {
-                    console.log(`[MCP Server]   - ${tool.name}`);
-                });
-            }
+            // Always show tool names for debugging
+            console.log(`[MCP Server] Tool names:`);
+            toolsList.tools.forEach(tool => {
+                console.log(`[MCP Server]   - ${tool.name}`);
+            });
             
         } catch (error) {
             console.error('[MCP Server] Failed to start:', error.message);

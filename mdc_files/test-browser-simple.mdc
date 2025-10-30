@@ -30,6 +30,5 @@ Tests that browser automation works end-to-end.
 {
   "tool": "browser_snapshot",
   "params": {}
-  }
 }
 ```
