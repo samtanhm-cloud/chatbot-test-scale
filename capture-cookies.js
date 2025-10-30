@@ -33,9 +33,9 @@ async function captureCookies() {
     const context = await browser.newContext();
     const page = await context.newPage();
     
-    // Navigate to Draftr
+    // Navigate to Draftr asset page (more cookies available on actual asset pages)
     console.log('🌐 Navigating to Draftr...\n');
-    await page.goto('https://webpub.autodesk.com/draftr/');
+    await page.goto('https://webpub.autodesk.com/draftr/asset/3934720');
     
     // Wait for user to log in
     console.log('⏸️  PAUSED - Please log in to Draftr now');
@@ -50,13 +50,25 @@ async function captureCookies() {
     console.log('\n📸 Capturing cookies...');
     const cookies = await context.cookies();
     
-    // Filter relevant cookies (only from draftr domain)
+    console.log(`📊 Total cookies in browser: ${cookies.length}`);
+    console.log(`   Domains: ${[...new Set(cookies.map(c => c.domain))].join(', ')}\n`);
+    
+    // Filter relevant cookies (only from draftr/autodesk domain)
     const draftrCookies = cookies.filter(cookie => 
         cookie.domain.includes('draftr') || 
         cookie.domain.includes('autodesk')
     );
     
-    console.log(`✅ Captured ${draftrCookies.length} cookies\n`);
+    console.log(`✅ Captured ${draftrCookies.length} Draftr/Autodesk cookies`);
+    
+    if (draftrCookies.length < 3) {
+        console.log('\n⚠️  WARNING: Very few cookies captured!');
+        console.log('   Make sure you:');
+        console.log('   1. Are fully logged into Draftr');
+        console.log('   2. Navigate to an actual Draftr asset page');
+        console.log('   3. Wait for page to fully load');
+        console.log('   4. THEN press Enter\n');
+    }
     
     // Output in format for Streamlit secrets
     console.log('=' .repeat(60));
