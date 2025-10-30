@@ -24,6 +24,13 @@ class MDCExecutor {
             ['-y', '@executeautomation/playwright-mcp-server'];
         this.mcpClient = null;
         this.mcpServerProcess = null;
+        
+        // Check if running on cloud
+        this.isCloud = process.env.STREAMLIT_RUNTIME_ENV === 'cloud' || 
+                      fs.existsSync('/mount/src');
+        
+        console.log(`[MDC Executor] Running in ${this.isCloud ? 'cloud' : 'local'} mode`);
+        console.log(`[MDC Executor] Headless mode forced: ${process.env.PLAYWRIGHT_HEADLESS}`);
     }
 
     async executeMDC(mdcFilePath, context = {}) {
@@ -172,16 +179,28 @@ class MDCExecutor {
             console.log(`[MCP Server] Starting: ${this.mcpServerPath} ${this.mcpServerArgs.join(' ')}`);
             
             // Ensure headless mode is set (critical for cloud environments)
+            // Force multiple environment variables for maximum compatibility
             const env = {
                 ...process.env,
+                // Playwright-specific
                 PLAYWRIGHT_HEADLESS: '1',
+                PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1',
+                PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
+                // Generic browser flags
                 BROWSER_HEADLESS: 'true',
                 HEADLESS: 'true',
-                PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1'
+                // Chromium-specific
+                CHROME_HEADLESS: 'true',
+                CHROMIUM_FLAGS: '--headless --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
+                // Additional stability flags
+                NO_SANDBOX: 'true',
+                DISABLE_GPU: 'true'
             };
             
-            console.log(`[MCP Server] Headless mode: ${env.PLAYWRIGHT_HEADLESS}`);
-            console.log(`[MCP Server] Display: ${env.DISPLAY || 'not set'}`);
+            console.log(`[MCP Server] Environment configured:`);
+            console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
+            console.log(`[MCP Server]   DISPLAY: ${env.DISPLAY || 'not set'}`);
+            console.log(`[MCP Server]   NO_SANDBOX: ${env.NO_SANDBOX}`);
             
             // Create MCP client
             this.mcpClient = new Client({
