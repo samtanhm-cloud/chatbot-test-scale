@@ -87,8 +87,6 @@ class MDCExecutor {
             await this.startMCPConnection();
             
             // Check authentication method
-            const fs = await import('fs');
-            const path = await import('path');
             const sessionFile = path.join(process.cwd(), 'auth', 'draftr-session.json');
             
             // Method 1: Persistent Browser Session (BEST - automatic, no manual injection!)
