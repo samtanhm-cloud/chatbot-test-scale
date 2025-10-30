@@ -212,15 +212,15 @@ def install_dependencies_if_needed():
                 
                 logs.append(f"   Completed in {elapsed:.1f} seconds")
                 logs.append(f"   Return code: {result.returncode}")
-            
-            if result.returncode == 0:
+                
+                if result.returncode == 0:
                     logs.append(f"   ✅ {install_cmd['desc']} installed successfully")
                     all_successful = True
-            else:
+                else:
                     logs.append(f"   ⚠️  {install_cmd['desc']} returned {result.returncode}")
                     if result.stderr:
                         logs.append(f"   {result.stderr[:100]}")
-        except Exception as e:
+            except Exception as e:
                 logs.append(f"   ⚠️  {install_cmd['desc']} error: {str(e)[:50]}")
                 continue
         
