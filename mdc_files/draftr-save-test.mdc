@@ -17,12 +17,12 @@ draftr, save, test, button
 }
 ```
 
-## Step 2: Wait for page load
+## Step 2: Wait for page load (with time to manually log in)
 ```mcp
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 180000))"
   }
 }
 ```
