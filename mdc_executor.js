@@ -236,8 +236,10 @@ class MDCExecutor {
             console.log(`[MCP Server] Environment configured:`);
             console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
             console.log(`[MCP Server]   PLAYWRIGHT_BROWSERS_PATH: ${env.PLAYWRIGHT_BROWSERS_PATH} (0=local)`);
+            console.log(`[MCP Server]   PLAYWRIGHT_LAUNCH_OPTIONS: ${env.PLAYWRIGHT_LAUNCH_OPTIONS}`);
             console.log(`[MCP Server]   DISPLAY: ${env.DISPLAY || 'not set'}`);
             console.log(`[MCP Server]   NO_SANDBOX: ${env.NO_SANDBOX}`);
+            console.log(`[MCP Server]   CHROMIUM_FLAGS: ${env.CHROMIUM_FLAGS}`);
             
             // Create MCP client
             this.mcpClient = new Client({
@@ -333,12 +335,23 @@ class MDCExecutor {
             
         } catch (error) {
             console.error(`[Command Executor] Error:`, error.message);
+            console.error(`[Command Executor] Full error:`, error);
+            
+            // Try to extract more details from the error
+            let errorDetails = error.message;
+            if (error.response) {
+                errorDetails += `\nResponse: ${JSON.stringify(error.response)}`;
+            }
+            if (error.cause) {
+                errorDetails += `\nCause: ${error.cause}`;
+            }
             
             return {
                 success: false,
                 tool: command.tool,
-                error: error.message,
+                error: errorDetails,
                 stack: error.stack,
+                fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
                 timestamp: new Date().toISOString()
             };
         }
