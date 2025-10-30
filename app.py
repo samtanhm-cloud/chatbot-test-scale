@@ -1127,6 +1127,20 @@ def main():
         
         # Execute automation
         if execute_btn and user_prompt:
+            # Check authentication status BEFORE execution
+            auth_status = st.empty()
+            try:
+                if hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
+                    cookies_json = st.secrets['DRAFTR_COOKIES']
+                    cookies = json.loads(cookies_json)
+                    auth_status.success(f"🔐 Authentication: {len(cookies)} cookies loaded from secrets")
+                else:
+                    auth_status.error("❌ Authentication: NO COOKIES FOUND IN SECRETS!")
+                    st.warning("⚠️ The automation will run without authentication. Draftr requires login!")
+                    st.info("💡 Run `node capture-cookies.js` locally and add output to Streamlit secrets.")
+            except Exception as e:
+                auth_status.error(f"❌ Authentication: Cookie loading failed - {str(e)}")
+            
             with st.spinner("🔄 Processing your request..."):
                 # Get available MDC files
                 available_mdc = st.session_state.mdc_executor.get_available_mdc_files()
