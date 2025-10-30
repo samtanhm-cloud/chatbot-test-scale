@@ -683,14 +683,24 @@ Respond with JSON containing:
 - "reason": brief explanation
 - "variables": extracted variables from the prompt (e.g., asset_id, new_url, link_text)
 
-For Draftr automation prompts, extract:
-- "asset_id": Draftr asset ID (numbers like 3934720, 123456, etc.)
-- "new_url": URL to update link to (can include or exclude https://)
-- "link_text": Optional text of link to update (e.g., "Get in touch", "Contact us")
+For Draftr automation prompts, extract these variables:
+- "asset_id": Draftr asset ID (from URL like draftr/asset/3934720)
+- "new_url": Target URL to update link to (from patterns like to "url" or to <url>)
+- "link_text": Text to identify specific link (from patterns like link in "text")
+- "old_url": Old URL pattern to replace (from patterns like replace all "url")
+- "old_domain": Old domain to replace (from patterns like domain "/en/")
+- "new_domain": New domain to use (from patterns like to "/uk/")
+- "operation": Type of operation (change_specific, replace_all, replace_domain)
+
+Supported prompt formats:
+1. run mdc on https://webpub.autodesk.com/draftr/asset/123456 and change link in "text" to "newurl.com"
+2. run mdc on URL https://webpub.autodesk.com/draftr/asset/123456 to replace all "oldurl.com" links to "newurl.com"
+3. run mdc on URL https://webpub.autodesk.com/draftr/asset/123456 to replace all domain "/en/" links to "/uk/"
 
 Example responses:
-{{"mdc_index": 0, "confidence": 0.95, "reason": "Draftr link update request", "variables": {{"asset_id": "3934720", "new_url": "www.autodesk.com/uk/support"}}}}
-{{"mdc_index": 1, "confidence": 0.85, "reason": "Simple browser test", "variables": {{}}}}
+{{"mdc_index": 0, "confidence": 0.95, "reason": "Draftr link update", "variables": {{"asset_id": "3934720", "new_url": "www.autodesk.com/uk/support", "link_text": "Get in touch", "operation": "change_specific"}}}}
+{{"mdc_index": 0, "confidence": 0.90, "reason": "Draftr bulk replace", "variables": {{"asset_id": "123456", "old_url": "oldsite.com", "new_url": "newsite.com", "operation": "replace_all"}}}}
+{{"mdc_index": 0, "confidence": 0.88, "reason": "Draftr domain replace", "variables": {{"asset_id": "789012", "old_domain": "/en/", "new_domain": "/uk/", "operation": "replace_domain"}}}}
 """
         
         try:
@@ -765,44 +775,97 @@ Example responses:
         }
     
     def _extract_variables_fallback(self, prompt: str) -> Dict:
-        """Extract variables from prompt using regex patterns (fallback method)"""
+        """Extract variables from prompt using regex patterns (fallback method)
+        
+        Supports these prompt formats:
+        1. run mdc on https://webpub.autodesk.com/draftr/asset/<assetID> and change link in "<text>" to "<New Link>"
+        2. run mdc on URL https://webpub.autodesk.com/draftr/asset/<assetID> to replace all "<Links>" links to "<new links>"
+        3. run mdc on URL https://webpub.autodesk.com/draftr/asset/<assetID> to replace all domain "<domain>" links to "<new domain>"
+        """
         import re
         variables = {}
         
-        # Extract asset ID (numbers, typically 6-7 digits for Draftr)
-        asset_match = re.search(r'asset[:\s]+(\d+)|asset=(\d+)|on\s+(\d{6,8})', prompt, re.IGNORECASE)
-        if asset_match:
-            variables['asset_id'] = next((g for g in asset_match.groups() if g), None)
-        
-        # Extract URL patterns
-        url_patterns = [
-            r'to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "to www.example.com"
-            r'link\s+to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "link to example.com"
-            r'url[:\s]+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "url: example.com"
-            r'change.*to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "change ... to example.com"
+        # Extract asset ID - supports multiple formats
+        asset_patterns = [
+            r'asset[/:](\d+)',  # "asset/123456" or "asset:123456"
+            r'asset[=\s]+(\d+)',  # "asset=123456" or "asset 123456"
+            r'draftr/asset/(\d+)',  # Full URL "draftr/asset/123456"
+            r'on\s+(\d{6,8})',  # "on 123456"
         ]
         
-        for pattern in url_patterns:
+        for pattern in asset_patterns:
+            asset_match = re.search(pattern, prompt, re.IGNORECASE)
+            if asset_match:
+                variables['asset_id'] = asset_match.group(1)
+                break
+        
+        # Extract "new link" URL - the target/destination URL
+        # Look for patterns like: to "url", to "<url>", links to "url"
+        new_url_patterns = [
+            r'to\s+"([^"]+)"',  # to "url"
+            r'to\s+<([^>]+)>',  # to <url>
+            r'to\s+["\']([^"\']+)["\']',  # to 'url' or to "url"
+            r'links?\s+to\s+"([^"]+)"',  # links to "url"
+            r'links?\s+to\s+<([^>]+)>',  # links to <url>
+            r'to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w./-]*)*)',  # to www.example.com/path
+        ]
+        
+        for pattern in new_url_patterns:
             url_match = re.search(pattern, prompt, re.IGNORECASE)
             if url_match:
                 url = url_match.group(1)
-                # Normalize URL (remove protocol if present, we'll add it in MDC)
+                # Normalize URL (remove protocol if present)
                 url = re.sub(r'^https?://', '', url)
                 variables['new_url'] = url
                 break
         
-        # Extract link text (text in quotes or after "in")
+        # Extract "link text" - text to identify which link to change
+        # Formats: link in "text", change link in "<text>", "<text>"
         link_text_patterns = [
-            r'"([^"]+)"',  # Text in double quotes
-            r"'([^']+)'",  # Text in single quotes
-            r'in\s+(["\'].*?["\']|[\w\s]+)\s+(?:to|link)',  # "in 'Get in touch' link"
+            r'link\s+in\s+"([^"]+)"',  # link in "text"
+            r'link\s+in\s+<([^>]+)>',  # link in <text>
+            r'change\s+link\s+in\s+"([^"]+)"',  # change link in "text"
+            r'in\s+"([^"]+)"\s+(?:to|link)',  # in "text" to/link
         ]
         
         for pattern in link_text_patterns:
-            text_match = re.search(pattern, prompt)
+            text_match = re.search(pattern, prompt, re.IGNORECASE)
             if text_match:
-                variables['link_text'] = text_match.group(1).strip('"\'')
+                variables['link_text'] = text_match.group(1)
                 break
+        
+        # Extract "links to replace" - old URL pattern to find and replace
+        # Formats: replace all "url", replace all domain "domain"
+        old_url_patterns = [
+            r'replace\s+all\s+"([^"]+)"\s+links',  # replace all "url" links
+            r'replace\s+all\s+<([^>]+)>\s+links',  # replace all <url> links
+            r'replace\s+all\s+domain\s+"([^"]+)"',  # replace all domain "domain"
+            r'replace\s+all\s+domain\s+<([^>]+)>',  # replace all domain <domain>
+        ]
+        
+        for pattern in old_url_patterns:
+            old_match = re.search(pattern, prompt, re.IGNORECASE)
+            if old_match:
+                variables['old_url'] = old_match.group(1)
+                break
+        
+        # Extract domain pattern (like "/en/", "/uk/", etc.)
+        domain_match = re.search(r'domain\s+"([^"]+)"', prompt, re.IGNORECASE)
+        if domain_match:
+            variables['old_domain'] = domain_match.group(1)
+            
+        # Extract new domain if replacing domains
+        new_domain_match = re.search(r'to\s+"([^"]+)".*domain', prompt, re.IGNORECASE)
+        if new_domain_match:
+            variables['new_domain'] = new_domain_match.group(1)
+        
+        # Detect operation type
+        if 'replace all' in prompt.lower():
+            variables['operation'] = 'replace_all'
+        elif 'change link in' in prompt.lower():
+            variables['operation'] = 'change_specific'
+        elif 'domain' in prompt.lower():
+            variables['operation'] = 'replace_domain'
         
         return variables
 
