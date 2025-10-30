@@ -13,7 +13,7 @@ After clicking "🔧 Install Dependencies", here's **exactly** how to verify it 
 🔧 System Status
 **AI Service:** 🟢 AI Connected
 **NPM Packages:** 🟡 Missing       ← Yellow = Not installed
-**Playwright:** 🟡 Missing         ← Yellow = Not installed
+**Playwright Chrome:** 🟡 Missing  ← Yellow = Not installed
 ```
 
 ### After Installation:
@@ -21,7 +21,7 @@ After clicking "🔧 Install Dependencies", here's **exactly** how to verify it 
 🔧 System Status
 **AI Service:** 🟢 AI Connected
 **NPM Packages:** 🟢 Installed     ← Green = Installed! ✅
-**Playwright:** 🟢 Ready           ← Green = Ready! ✅
+**Playwright Chrome:** 🟢 Ready    ← Green = Ready! ✅
 ```
 
 **If you see 🟢 green circles, dependencies are installed!**
@@ -38,13 +38,13 @@ After clicking "Install Dependencies", you'll see:
 
 📋 Installation Details (click to expand)
   Npm Packages: Installed (176 packages)
-  Playwright: Chromium installed
+  Playwright: Chrome installed
 
 📜 Installation Log
   📦 Installing npm packages...
   ✅ npm packages installed successfully
-  🎭 Installing Playwright chromium browser...
-  ✅ Playwright chromium installed successfully
+  🎭 Installing Playwright Chrome browser...
+  ✅ Playwright Chrome installed successfully
   ✅ Playwright browser verified
   ✅ All dependencies verified and ready!
 ```
@@ -160,8 +160,8 @@ ls -1 node_modules | wc -l
 # Should show: ~176-180
 
 # Verify Playwright browser
-npx playwright install --dry-run chromium
-# Should show: chromium is already installed
+npx playwright install --dry-run chrome
+# Should show: chrome is already installed
 ```
 
 ---
@@ -197,7 +197,7 @@ The status indicators refresh automatically when the page loads. No need to manu
 During installation:
 - You'll see a spinner: "Installing dependencies... This may take 3-5 minutes..."
 - This is normal! npm needs to download ~176 packages
-- Playwright needs to download the Chromium browser (~100 MB)
+- Playwright needs to download the Chrome browser (~100 MB)
 
 ### Tip 4: Logs Are Saved
 Installation logs are displayed in the UI, so you can always expand them to see exactly what happened.
@@ -226,7 +226,7 @@ If you see **ALL** 🟢 green indicators, dependencies **ARE** installed and rea
 Go to sidebar → **System Status** → Look for:
 ```
 **NPM Packages:** 🟢 Installed
-**Playwright:** 🟢 Ready
+**Playwright Chrome:** 🟢 Ready
 ```
 
 **Both green? You're good to go!** 🎉

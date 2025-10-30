@@ -1,5 +1,6 @@
 {
   "browser": {
+    "channel": "chrome",
     "headless": true,
     "args": [
       "--headless=new",
@@ -14,6 +15,7 @@
   },
   "defaultTimeout": 30000,
   "launchOptions": {
+    "channel": "chrome",
     "headless": true,
     "args": [
       "--headless=new",

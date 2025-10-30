@@ -35,11 +35,11 @@ fi
 # Install Playwright browsers
 echo "🎭 Installing Playwright browsers..."
 if command -v npx &> /dev/null; then
-    npx playwright install chromium
+    npx playwright install chrome
     
     # Create marker file
     touch .playwright_installed
-    echo "✅ Playwright browsers installed"
+    echo "✅ Playwright Chrome browser installed"
 else
     echo "⚠️  npx not found, skipping Playwright install"
 fi
