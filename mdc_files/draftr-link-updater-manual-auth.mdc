@@ -1,0 +1,285 @@
+# Draftr Link Updater (Manual Authentication)
+
+**Updates links in Draftr with manual authentication step**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID
+- `{{new_url}}` - New URL to update link to
+- `{{link_text}}` - Text of link to find
+
+## Keywords
+draftr, link, update, manual, auth, authentication, interactive
+
+---
+
+## PHASE 1: Navigate and Wait for Manual Login
+
+### Step 1.1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+### Step 1.2: Take screenshot of initial page (login or asset page)
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-initial-page-{{asset_id}}"
+  }
+}
+```
+
+### Step 1.3: Wait 60 seconds for manual authentication
+**⚠️ USER ACTION REQUIRED: Log in manually if prompted**
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => { console.log('⏸️  PAUSED FOR AUTHENTICATION'); console.log('🔐 Please log in to Draftr if you see a login page'); console.log('⏰ Waiting 60 seconds...'); setTimeout(() => { console.log('✅ Resuming automation'); resolve(); }, 60000); })"
+  }
+}
+```
+
+### Step 1.4: Check if we're logged in (look for Draftr UI elements)
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const draftrElements = document.querySelectorAll('.draftr__menu-item, [class*=\"draftr\"]'); const hasContent = document.body.innerText.length > 100; return { isDraftrPage: draftrElements.length > 0, bodyTextLength: document.body.innerText.length, hasContent: hasContent, title: document.title, currentUrl: window.location.href, status: (draftrElements.length > 0 || hasContent) ? 'Logged in successfully' : 'Still on login page - may need more time' }; }"
+  }
+}
+```
+
+### Step 1.5: Screenshot after authentication wait
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-after-auth-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 2: Extract Current Links
+
+### Step 2.1: Get all links from the page
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim().substring(0, 50) }); }); return { totalLinks: links.length, links: links.slice(0, 20), assetId: '{{asset_id}}' }; }"
+  }
+}
+```
+
+---
+
+## PHASE 3: Find and Click Link to Edit
+
+### Step 3.1: Find target link and click it
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const linkText = '{{link_text}}'; const links = Array.from(document.querySelectorAll('a[href]')); const targetLink = links.find(a => a.textContent.trim().toLowerCase().includes(linkText.toLowerCase())); if (targetLink) { targetLink.click(); targetLink.scrollIntoView({ behavior: 'smooth', block: 'center' }); return { found: true, linkText: targetLink.textContent.trim(), currentHref: targetLink.href, action: 'Clicked link to open editor' }; } else { return { found: false, searchedFor: linkText, availableLinks: links.map(a => ({ text: a.textContent.trim().substring(0, 30), href: a.href.substring(0, 50) })).slice(0, 10) }; } }"
+  }
+}
+```
+
+### Step 3.2: Wait for editor to open
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 3.3: Screenshot of editor
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-editor-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 4: Update Link URL
+
+### Step 4.1: Find and update the link input field
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const newUrl = '{{new_url}}'; const fullUrl = newUrl.startsWith('http') ? newUrl : 'https://' + newUrl; const inputs = Array.from(document.querySelectorAll('input[type=\"text\"], input[type=\"url\"], input:not([type])')); let linkInput = inputs.find(input => input.value && (input.value.startsWith('http') || input.value.includes('.'))); if (!linkInput) { linkInput = inputs.find(input => input.placeholder && (input.placeholder.toLowerCase().includes('url') || input.placeholder.toLowerCase().includes('link'))); } if (linkInput) { linkInput.focus(); linkInput.select(); const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; nativeInputValueSetter.call(linkInput, fullUrl); linkInput.dispatchEvent(new Event('input', { bubbles: true })); linkInput.dispatchEvent(new Event('change', { bubbles: true })); linkInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return { success: true, oldValue: linkInput.value, newValue: fullUrl, action: 'Updated link URL with events' }; } else { return { success: false, error: 'Could not find link input field', totalInputs: inputs.length, inputs: inputs.map(i => ({ type: i.type, value: i.value ? i.value.substring(0, 30) : '', placeholder: i.placeholder })).slice(0, 5) }; } }"
+  }
+}
+```
+
+### Step 4.2: Wait for change to register
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 4.3: Screenshot after update
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-updated-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 5: Save Changes
+
+### Step 5.1: Find and click Save button
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const saveSelectors = [ () => Array.from(document.querySelectorAll('.draftr__menu-item')).find(el => el.textContent.trim().toLowerCase() === 'save'), () => Array.from(document.querySelectorAll('button')).find(btn => btn.textContent.trim().toLowerCase().includes('save')), () => document.querySelector('[aria-label*=\"save\" i]'), () => document.querySelector('button[class*=\"save\" i]') ]; let saveButton = null; let usedSelector = null; for (let i = 0; i < saveSelectors.length; i++) { saveButton = saveSelectors[i](); if (saveButton) { usedSelector = i; break; } } if (saveButton) { saveButton.click(); return { success: true, buttonText: saveButton.textContent.trim(), selectorIndex: usedSelector, action: 'Clicked Save button' }; } else { return { success: false, error: 'Save button not found', availableButtons: Array.from(document.querySelectorAll('button')).map(b => b.textContent.trim()).slice(0, 10) }; } }"
+  }
+}
+```
+
+### Step 5.2: Wait for save to complete
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 3000))"
+  }
+}
+```
+
+### Step 5.3: Verify save
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const notification = document.querySelector('[class*=\"notification\" i], [class*=\"toast\" i], [class*=\"success\" i], [class*=\"saved\" i]'); return { saveComplete: true, notificationFound: !!notification, notificationText: notification ? notification.textContent.trim() : 'No notification found', pageTitle: document.title, timestamp: new Date().toISOString() }; }"
+  }
+}
+```
+
+### Step 5.4: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-saved-{{asset_id}}"
+  }
+}
+```
+
+### Step 5.5: Wait 5 seconds to see final result
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => { console.log('⏸️  Pausing 5 seconds to see final result...'); setTimeout(resolve, 5000); })"
+  }
+}
+```
+
+---
+
+## 📋 **How to Use**
+
+### **Step 1: Use Non-Headless Mode (Required for Manual Login)**
+
+```bash
+cd "/Users/tansa/Desktop/Playwright mcp rule file/streamlit_mdc_app"
+
+# Temporarily switch to visible browser mode
+cp playwright-mcp-config-local.json playwright-mcp-config.json
+```
+
+### **Step 2: Run the Automation**
+
+```bash
+node mdc_executor.js mdc_files/draftr-link-updater-manual-auth.mdc \
+  --context '{"variables":{"asset_id":"3934720","link_text":"get in touch","new_url":"www.autodesk.com/uk/support"}}'
+```
+
+### **Step 3: Manual Login During 60-Second Pause**
+
+1. 🖥️ Browser window opens
+2. 🔐 You see Draftr login page (or asset page if already logged in)
+3. ⏰ **You have 60 seconds to log in manually**
+4. ✅ Automation continues automatically after 60 seconds
+
+### **Step 4: Watch It Work!**
+
+- 👀 See the automation find and click the link
+- 👀 See it update the URL
+- 👀 See it click Save
+- 📸 Screenshots saved at each step
+
+### **Step 5: Restore Headless Config**
+
+```bash
+# Restore original config (for Streamlit Cloud)
+git checkout playwright-mcp-config.json
+```
+
+---
+
+## ⚙️ **Adjusting the Wait Time**
+
+If 60 seconds isn't enough, edit **Step 1.3** and change:
+```javascript
+setTimeout(() => { resolve(); }, 60000);  // 60000 = 60 seconds
+```
+
+To:
+```javascript
+setTimeout(() => { resolve(); }, 120000);  // 120000 = 120 seconds (2 minutes)
+```
+
+---
+
+## ✅ **Advantages**
+
+✅ **No credential storage** - You log in manually  
+✅ **Works with SSO/2FA** - Handles any authentication  
+✅ **Visual debugging** - See exactly what's happening  
+✅ **Safe** - No security risks from stored passwords  
+
+---
+
+## ⚠️ **Limitations**
+
+❌ **Not for Streamlit Cloud** - Requires manual interaction  
+❌ **Not fully automated** - Needs human to log in  
+✅ **Perfect for local testing and development**  
+
+---
+
+## 🚀 **For Streamlit Cloud**
+
+To make this work on Streamlit Cloud, you would need:
+1. API-based authentication (no manual login)
+2. Stored session cookies
+3. Or use Draftr API instead of browser automation
+
+But for **local testing and development**, this manual-auth approach is **perfect**! 🎯
