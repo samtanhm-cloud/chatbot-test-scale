@@ -1,6 +1,7 @@
 {
   "browser": {
     "channel": "chrome",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": true,
     "args": [
       "--headless=new",
@@ -16,6 +17,7 @@
   "defaultTimeout": 30000,
   "launchOptions": {
     "channel": "chrome",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": true,
     "args": [
       "--headless=new",

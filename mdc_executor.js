@@ -302,6 +302,7 @@ class MDCExecutor {
             // Force multiple environment variables for maximum compatibility
             const launchOptions = {
                 channel: 'chrome',  // Force Chrome instead of Chromium
+                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 headless: true,
                 args: [
                     '--headless=new',
