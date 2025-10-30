@@ -88,16 +88,22 @@ Update link to www.autodesk.com/uk/support
 [MCP Server] Navigating to: https://webpub.autodesk.com/draftr/asset/3934720
 ```
 
-**0:03 - 3:03** - ⏰ **MANUAL LOGIN WINDOW**
+**0:03** - ⏸️ **BROWSER PAUSES WITH ALERT DIALOG**
 ```
-⏰ You have 3 minutes to:
-  1. Click "Sign In"
+📢 You'll see a popup that says:
+  "⏸️ AUTOMATION PAUSED
+   🔐 Please log in to Draftr now
+   ✅ Click OK when logged in and ready to continue"
+
+⏰ Take as long as you need to:
+  1. Click "Sign In" in Draftr
   2. Enter Autodesk credentials
   3. Complete 2FA if needed
   4. Wait for page to fully load
+  5. Click OK in the alert dialog
 ```
 
-**3:04** - Automation continues
+**After clicking OK** - Automation continues immediately
 ```
 [MCP Server] Taking screenshot...
 [MCP Server] Running analysis...
@@ -145,8 +151,8 @@ cd "/Users/tansa/Desktop/Playwright mcp rule file/streamlit_mdc_app"
 npx playwright install chrome
 ```
 
-### Chrome doesn't stay open long enough
-**Solution:** Already fixed! Now waits 3 minutes (180 seconds)
+### Chrome closes too quickly / Can't see the alert
+**Solution:** The browser is now VISIBLE and uses a blocking JavaScript alert that pauses until you click OK
 
 ---
 
