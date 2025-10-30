@@ -266,13 +266,10 @@ class MDCExecutor {
             const launchOptions = {
                 headless: true,
                 args: [
-                    '--headless',
+                    '--headless=new',
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--single-process',
-                    '--no-zygote'
+                    '--disable-dev-shm-usage'
                 ]
             };
             
@@ -291,7 +288,7 @@ class MDCExecutor {
                 HEADLESS: 'true',
                 // Chromium-specific
                 CHROME_HEADLESS: 'true',
-                CHROMIUM_FLAGS: '--headless --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --single-process',
+                CHROMIUM_FLAGS: '--headless=new --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
                 // Additional stability flags
                 NO_SANDBOX: 'true',
                 DISABLE_GPU: 'true'
