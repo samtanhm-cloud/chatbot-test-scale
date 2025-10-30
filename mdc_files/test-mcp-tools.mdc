@@ -1,0 +1,13 @@
+# MCP Tool Name Test
+
+Testing different tool naming patterns to find what works.
+
+## Test 1: Try mcp_playwright-extension prefix
+```mcp
+{
+  "tool": "mcp_playwright-extension_browser_navigate",
+  "params": {
+    "url": "https://example.com"
+  }
+}
+```
