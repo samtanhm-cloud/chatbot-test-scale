@@ -1,0 +1,106 @@
+# Draftr Authentication & UI Check
+
+**Verifies authentication works and finds UI elements**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID
+
+## Keywords
+draftr, test, auth, authentication, verify, ui
+
+---
+
+## Step 1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+## Step 2: Wait for page to load
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+## Step 3: Take screenshot to see what loaded
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-auth-check-{{asset_id}}"
+  }
+}
+```
+
+## Step 4: Check if we're authenticated (look for Draftr UI)
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const allElements = Array.from(document.querySelectorAll('*')); const classNames = new Set(); const ids = new Set(); const buttons = []; const menuItems = []; allElements.forEach(el => { if (el.className && typeof el.className === 'string') { el.className.split(' ').forEach(c => { if (c.includes('draftr') || c.includes('menu') || c.includes('save')) { classNames.add(c); } }); } if (el.id && (el.id.includes('draftr') || el.id.includes('menu') || el.id.includes('save'))) { ids.add(el.id); } if (el.tagName === 'BUTTON') { buttons.push({ text: el.textContent.trim().substring(0, 30), className: el.className, id: el.id, visible: window.getComputedStyle(el).display !== 'none' }); } if (el.textContent && el.textContent.toLowerCase().includes('save') && el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE') { menuItems.push({ tag: el.tagName, text: el.textContent.trim().substring(0, 50), className: el.className, id: el.id, visible: window.getComputedStyle(el).display !== 'none' }); } }); return { authenticated: document.body.innerText.length > 500, pageTitle: document.title, currentUrl: window.location.href, draftrClasses: Array.from(classNames).slice(0, 20), draftrIds: Array.from(ids).slice(0, 10), allButtons: buttons.slice(0, 10), saveElements: menuItems.slice(0, 10) }; }"
+  }
+}
+```
+
+## Step 5: Get all links on the page
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { if (i < 20) { links.push({ index: i, href: a.href.substring(0, 60), text: a.textContent.trim().substring(0, 40) }); } }); return { totalLinks: document.querySelectorAll('a[href]').length, sampleLinks: links }; }"
+  }
+}
+```
+
+## Step 6: Get visible text
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+## Step 7: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-ui-elements-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## 📊 Expected Output
+
+This will tell us:
+- ✅ If authentication worked (page has content)
+- ✅ What Draftr CSS classes exist (e.g., `.draftr__save-button`)
+- ✅ What buttons are on the page
+- ✅ What elements contain "Save" text
+- ✅ The correct selector to use
+
+---
+
+## 🚀 Usage
+
+```
+run auth check on draftr asset 3934720
+```
+
+Then check the execution log for:
+- `authenticated: true/false`
+- `draftrClasses: [...]` - actual CSS classes
+- `allButtons: [...]` - all buttons on page
+- `saveElements: [...]` - elements with "Save" text
+
+Use this info to find the correct Save button selector!
