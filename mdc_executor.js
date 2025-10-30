@@ -301,6 +301,7 @@ class MDCExecutor {
             // Ensure headless mode is set (critical for cloud environments)
             // Force multiple environment variables for maximum compatibility
             const launchOptions = {
+                channel: 'chrome',  // Force Chrome instead of Chromium
                 headless: true,
                 args: [
                     '--headless=new',
@@ -317,13 +318,16 @@ class MDCExecutor {
                 PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1',
                 // CRITICAL: Force local browser path (0 = use node_modules/.local-browsers/)
                 PLAYWRIGHT_BROWSERS_PATH: '0',
+                // CRITICAL: Force Chrome browser channel
+                PLAYWRIGHT_BROWSER_CHANNEL: 'chrome',
+                BROWSER_CHANNEL: 'chrome',
                 // Pass launch options as JSON (some MCP servers read this)
                 PLAYWRIGHT_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
                 BROWSER_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
                 // Generic browser flags
                 BROWSER_HEADLESS: 'true',
                 HEADLESS: 'true',
-                // Chromium-specific
+                // Chrome-specific
                 CHROME_HEADLESS: 'true',
                 CHROMIUM_FLAGS: '--headless=new --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
                 // Additional stability flags
@@ -332,12 +336,12 @@ class MDCExecutor {
             };
             
             console.log(`[MCP Server] Environment configured:`);
+            console.log(`[MCP Server]   PLAYWRIGHT_BROWSER_CHANNEL: ${env.PLAYWRIGHT_BROWSER_CHANNEL} (CHROME!)`);
             console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
             console.log(`[MCP Server]   PLAYWRIGHT_BROWSERS_PATH: ${env.PLAYWRIGHT_BROWSERS_PATH} (0=local)`);
             console.log(`[MCP Server]   PLAYWRIGHT_LAUNCH_OPTIONS: ${env.PLAYWRIGHT_LAUNCH_OPTIONS}`);
             console.log(`[MCP Server]   DISPLAY: ${env.DISPLAY || 'not set'}`);
             console.log(`[MCP Server]   NO_SANDBOX: ${env.NO_SANDBOX}`);
-            console.log(`[MCP Server]   CHROMIUM_FLAGS: ${env.CHROMIUM_FLAGS}`);
             
             // Create MCP client
             this.mcpClient = new Client({
