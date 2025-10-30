@@ -1,0 +1,206 @@
+# Draftr Link Updater (JavaScript-Based)
+
+**Updates links in Draftr using JavaScript - no UI clicking required!**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID
+- `{{new_url}}` - New URL to update link to
+- `{{link_text}}` - (Optional) Text of link to find
+- `{{old_url}}` - (Optional) Old URL pattern to replace
+- `{{operation}}` - Type of operation (change_specific, replace_all, replace_domain)
+
+## Keywords
+draftr, link, update, javascript, automation, direct
+
+---
+
+## PHASE 1: Navigate & Load
+
+### Step 1.1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+### Step 1.2: Wait for page load
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+### Step 1.3: Take initial screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-asset-{{asset_id}}-initial"
+  }
+}
+```
+
+---
+
+## PHASE 2: Extract Current Links
+
+### Step 2.1: Get all links with details
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), outerHTML: a.outerHTML.substring(0, 100) }); }); return { totalLinks: links.length, links: links, assetId: '{{asset_id}}', timestamp: new Date().toISOString() }; }"
+  }
+}
+```
+
+---
+
+## PHASE 3: Update Links with JavaScript
+
+### Step 3.1: Update link based on operation type
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const operation = '{{operation}}'; const linkText = '{{link_text}}'; const newUrl = '{{new_url}}'; const oldUrl = '{{old_url}}'; const oldDomain = '{{old_domain}}'; const newDomain = '{{new_domain}}'; let updated = 0; const links = document.querySelectorAll('a[href]'); links.forEach(link => { let shouldUpdate = false; if (operation === 'change_specific' && linkText && link.textContent.trim().includes(linkText)) { shouldUpdate = true; link.href = newUrl.startsWith('http') ? newUrl : 'https://' + newUrl; } else if (operation === 'replace_all' && oldUrl && link.href.includes(oldUrl)) { shouldUpdate = true; link.href = link.href.replace(oldUrl, newUrl); } else if (operation === 'replace_domain' && oldDomain && link.href.includes(oldDomain)) { shouldUpdate = true; link.href = link.href.replace(new RegExp(oldDomain.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'g'), newDomain); } if (shouldUpdate) { updated++; link.style.border = '2px solid red'; link.setAttribute('data-updated', 'true'); } }); return { operation: operation, linksUpdated: updated, newUrl: newUrl, oldUrl: oldUrl, timestamp: new Date().toISOString(), note: 'Links modified in DOM - need to save in Draftr' }; }"
+  }
+}
+```
+
+### Step 3.2: Wait for visual update
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 3.3: Screenshot showing updated links (red border)
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-asset-{{asset_id}}-links-highlighted"
+  }
+}
+```
+
+---
+
+## PHASE 4: Verification
+
+### Step 4.1: Get updated link list
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const updatedLinks = []; document.querySelectorAll('a[data-updated=\"true\"]').forEach((a, i) => { updatedLinks.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalUpdated: updatedLinks.length, updatedLinks: updatedLinks, verification: 'Links modified in DOM', nextStep: 'Manual save required in Draftr UI' }; }"
+  }
+}
+```
+
+### Step 4.2: Get visible text to show changes
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+### Step 4.3: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-asset-{{asset_id}}-final"
+  }
+}
+```
+
+---
+
+## ⚠️ Important Notes
+
+### What This Does:
+1. ✅ Navigates to your Draftr asset
+2. ✅ Extracts all current links
+3. ✅ Modifies links in the DOM using JavaScript
+4. ✅ Highlights changed links with red border
+5. ✅ Takes screenshots showing changes
+6. ✅ Returns list of updated links
+
+### What This DOESN'T Do:
+❌ **Does NOT save changes to Draftr backend**
+
+### Why?
+Draftr's save mechanism requires either:
+- Clicking through the UI (needs exact selectors)
+- Using Draftr's API (needs authentication)
+
+This automation **shows you what would change** and highlights the links. You'll need to:
+1. Review the changes (shown in red)
+2. Manually save in Draftr
+3. OR extend this to click Save button (if you provide the correct selector)
+
+---
+
+## 🎯 How to Extend with Save
+
+If you want automatic saving, add this step and provide the real Save button selector:
+
+```mcp
+### Manual Step: Click Save (requires real selector)
+{
+  "tool": "playwright_click",
+  "params": {
+    "selector": "button[aria-label='Save']"
+  }
+}
+```
+
+**To find the selector:**
+1. Open Draftr in browser
+2. Right-click Save button
+3. Inspect → Copy selector
+4. Replace `"button[aria-label='Save']"` with your actual selector
+
+---
+
+## 📊 Expected Output
+
+```json
+{
+  "operation": "change_specific",
+  "linksUpdated": 1,
+  "newUrl": "www.autodesk.com/uk/support",
+  "updatedLinks": [
+    {
+      "index": 0,
+      "href": "https://www.autodesk.com/uk/support",
+      "text": "Get in touch"
+    }
+  ]
+}
+```
+
+---
+
+## 🚀 Advantages of JavaScript Approach
+
+✅ **No UI selectors needed** - Works on any Draftr asset
+✅ **Fast** - Direct DOM manipulation
+✅ **Reliable** - No waiting for UI elements
+✅ **Visual confirmation** - Red borders show changes
+✅ **Detailed output** - Returns exactly what changed
+✅ **Flexible** - Handles all three operation types
+
+❌ **Manual save required** - Unless you add Save button selector
