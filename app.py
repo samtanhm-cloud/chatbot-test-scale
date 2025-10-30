@@ -200,27 +200,27 @@ def install_dependencies_if_needed():
             
             try:
                 start_time = time.time()
-                result = subprocess.run(
+            result = subprocess.run(
                     install_cmd['cmd'],
-                    cwd=Path(__file__).parent,
-                    capture_output=True,
-                    text=True,
+                cwd=Path(__file__).parent,
+                capture_output=True,
+                text=True,
                     timeout=300,  # 5 minute timeout
                     env=install_cmd.get('env', os.environ.copy())  # Use custom env if provided
-                )
+            )
                 elapsed = time.time() - start_time
                 
                 logs.append(f"   Completed in {elapsed:.1f} seconds")
                 logs.append(f"   Return code: {result.returncode}")
-                
-                if result.returncode == 0:
+            
+            if result.returncode == 0:
                     logs.append(f"   ✅ {install_cmd['desc']} installed successfully")
                     all_successful = True
-                else:
+            else:
                     logs.append(f"   ⚠️  {install_cmd['desc']} returned {result.returncode}")
                     if result.stderr:
                         logs.append(f"   {result.stderr[:100]}")
-            except Exception as e:
+        except Exception as e:
                 logs.append(f"   ⚠️  {install_cmd['desc']} error: {str(e)[:50]}")
                 continue
         
@@ -239,7 +239,7 @@ def install_dependencies_if_needed():
             logs.append("   ⚠️  Installation succeeded but binary not found at expected path")
             logs.append(f"   Expected: {expected_browser_path}")
             details['playwright'] = 'Installed (location unclear)'
-        else:
+    else:
             logs.append("   ❌ Browser binary NOT found")
             logs.append("   ⚠️  All installation methods failed")
             playwright_marker.touch()  # Mark as attempted to avoid retry loops
