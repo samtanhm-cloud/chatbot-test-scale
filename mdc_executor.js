@@ -99,7 +99,11 @@ class MDCExecutor {
                 // Stop on critical failure
                 if (!result.success && !commands[i].optional) {
                     console.error(`[MDC Executor] Critical command failed, stopping execution`);
-                    console.error(`[MDC Executor] Error:`, result.error);
+                    console.error(`[MDC Executor] Error:`, result.error || 'No error message provided');
+                    console.error(`[MDC Executor] Full result:`, JSON.stringify(result, null, 2));
+                    if (result.fullError) {
+                        console.error(`[MDC Executor] Full error object:`, result.fullError);
+                    }
                     break;
                 }
             }
@@ -334,24 +338,43 @@ class MDCExecutor {
             };
             
         } catch (error) {
-            console.error(`[Command Executor] Error:`, error.message);
+            console.error(`[Command Executor] Error:`, error.message || 'Unknown error');
+            console.error(`[Command Executor] Error type:`, typeof error);
+            console.error(`[Command Executor] Error constructor:`, error.constructor?.name);
             console.error(`[Command Executor] Full error:`, error);
             
             // Try to extract more details from the error
-            let errorDetails = error.message;
+            let errorDetails = error.message || error.toString() || 'Unknown error occurred';
+            
+            // Add any additional error properties
             if (error.response) {
                 errorDetails += `\nResponse: ${JSON.stringify(error.response)}`;
             }
             if (error.cause) {
                 errorDetails += `\nCause: ${error.cause}`;
             }
+            if (error.code) {
+                errorDetails += `\nCode: ${error.code}`;
+            }
+            
+            // Try to get error details from all properties
+            const errorProps = Object.keys(error);
+            if (errorProps.length > 0) {
+                errorDetails += `\nError properties: ${errorProps.join(', ')}`;
+                errorProps.forEach(prop => {
+                    if (error[prop] && typeof error[prop] !== 'function') {
+                        errorDetails += `\n${prop}: ${JSON.stringify(error[prop])}`;
+                    }
+                });
+            }
             
             return {
                 success: false,
                 tool: command.tool,
                 error: errorDetails,
-                stack: error.stack,
+                stack: error.stack || 'No stack trace',
                 fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+                errorType: error.constructor?.name || typeof error,
                 timestamp: new Date().toISOString()
             };
         }
