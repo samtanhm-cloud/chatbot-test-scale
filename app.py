@@ -593,10 +593,20 @@ class MDCExecutor:
                 env['DISPLAY'] = ':99'
                 print(f"🔧 Setting DISPLAY={env['DISPLAY']} for subprocess")
             
-            # Force Playwright to run in headless mode (critical for cloud)
-            env['PLAYWRIGHT_HEADLESS'] = '1'
-            env['BROWSER_HEADLESS'] = 'true'
-            env['HEADLESS'] = 'true'
+            # Configure headless mode based on environment
+            is_cloud_env = is_cloud  # Use the is_cloud variable from line 508
+            if is_cloud_env:
+                # Force headless on cloud (critical for cloud deployment)
+                env['PLAYWRIGHT_HEADLESS'] = '1'
+                env['BROWSER_HEADLESS'] = 'true'
+                env['HEADLESS'] = 'true'
+                print("☁️  Cloud mode: Browser will run HEADLESS")
+            else:
+                # Allow visible browser locally (for manual login)
+                env['PLAYWRIGHT_HEADLESS'] = '0'
+                env['BROWSER_HEADLESS'] = 'false'
+                env['HEADLESS'] = 'false'
+                print("🏠 Local mode: Browser will be VISIBLE for 3 minutes (manual login)")
             
             # Additional Playwright browser args for stability
             env['PLAYWRIGHT_CHROMIUM_NO_SANDBOX'] = '1'
