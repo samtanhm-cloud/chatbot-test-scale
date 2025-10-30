@@ -20,14 +20,33 @@ const __dirname = path.dirname(__filename);
 class MDCExecutor {
     constructor() {
         this.mcpServerPath = process.env.MCP_SERVER_PATH || 'npx';
-        this.mcpServerArgs = process.env.MCP_SERVER_ARGS?.split(' ') || 
-            ['-y', '@executeautomation/playwright-mcp-server'];
-        this.mcpClient = null;
-        this.mcpServerProcess = null;
         
         // Check if running on cloud
         this.isCloud = process.env.STREAMLIT_RUNTIME_ENV === 'cloud' || 
                       fs.existsSync('/mount/src');
+        
+        // Build MCP server args with config file path
+        const configPath = path.join(__dirname, 'playwright-mcp-config.json');
+        
+        if (process.env.MCP_SERVER_ARGS) {
+            this.mcpServerArgs = process.env.MCP_SERVER_ARGS.split(' ');
+        } else {
+            // Try to pass config file if it exists
+            if (fs.existsSync(configPath)) {
+                this.mcpServerArgs = [
+                    '-y',
+                    '@executeautomation/playwright-mcp-server',
+                    '--config',
+                    configPath
+                ];
+                console.log(`[MDC Executor] Using config file: ${configPath}`);
+            } else {
+                this.mcpServerArgs = ['-y', '@executeautomation/playwright-mcp-server'];
+            }
+        }
+        
+        this.mcpClient = null;
+        this.mcpServerProcess = null;
         
         console.log(`[MDC Executor] Running in ${this.isCloud ? 'cloud' : 'local'} mode`);
         console.log(`[MDC Executor] Headless mode forced: ${process.env.PLAYWRIGHT_HEADLESS}`);
@@ -180,6 +199,19 @@ class MDCExecutor {
             
             // Ensure headless mode is set (critical for cloud environments)
             // Force multiple environment variables for maximum compatibility
+            const launchOptions = {
+                headless: true,
+                args: [
+                    '--headless',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--single-process',
+                    '--no-zygote'
+                ]
+            };
+            
             const env = {
                 ...process.env,
                 // Playwright-specific
@@ -187,12 +219,15 @@ class MDCExecutor {
                 PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1',
                 // CRITICAL: Force local browser path (0 = use node_modules/.local-browsers/)
                 PLAYWRIGHT_BROWSERS_PATH: '0',
+                // Pass launch options as JSON (some MCP servers read this)
+                PLAYWRIGHT_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
+                BROWSER_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
                 // Generic browser flags
                 BROWSER_HEADLESS: 'true',
                 HEADLESS: 'true',
                 // Chromium-specific
                 CHROME_HEADLESS: 'true',
-                CHROMIUM_FLAGS: '--headless --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage',
+                CHROMIUM_FLAGS: '--headless --no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --single-process',
                 // Additional stability flags
                 NO_SANDBOX: 'true',
                 DISABLE_GPU: 'true'
