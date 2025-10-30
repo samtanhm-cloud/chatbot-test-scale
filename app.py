@@ -551,17 +551,34 @@ class MDCExecutor:
             env['PLAYWRIGHT_CHROMIUM_NO_SANDBOX'] = '1'
             
             print(f"🚀 Executing: {' '.join(cmd)}")
+            print(f"📂 Working directory: {Path(__file__).parent}")
             print(f"📺 DISPLAY={env.get('DISPLAY', 'NOT SET')}")
             print(f"🎭 HEADLESS={env.get('PLAYWRIGHT_HEADLESS', 'NOT SET')}")
             
+            # Check if Node.js is available
+            node_check = subprocess.run(['which', 'node'], capture_output=True, text=True)
+            print(f"🟢 Node.js path: {node_check.stdout.strip()}")
+            
+            # Check if mdc_executor.js exists
+            executor_path = Path(__file__).parent / 'mdc_executor.js'
+            print(f"🟢 Executor exists: {executor_path.exists()}")
+            
             # Execute with explicit environment
+            start_time = time.time()
             result = subprocess.run(
                 cmd,
+                cwd=Path(__file__).parent,  # Ensure correct working directory
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout
                 env=env  # Pass environment with DISPLAY
             )
+            elapsed = time.time() - start_time
+            
+            print(f"⏱️  Execution completed in {elapsed:.2f} seconds")
+            print(f"📤 Return code: {result.returncode}")
+            print(f"📝 Stdout length: {len(result.stdout)} chars")
+            print(f"📝 Stderr length: {len(result.stderr)} chars")
             
             return {
                 "success": result.returncode == 0,
@@ -1108,6 +1125,10 @@ def main():
                             match_result['mdc_file']['path'],
                             context=match_result['parameters']
                         )
+                        
+                        # Debug: Show raw result
+                        with st.expander("🔍 Debug: Raw Result"):
+                            st.json(result)
                         
                         # Store in history
                         st.session_state.execution_history.append({

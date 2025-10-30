@@ -505,11 +505,17 @@ async function main() {
 }
 
 // ES module equivalent of checking if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this file is being run directly (not imported)
+const isMainModule = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isMainModule) {
+    console.log('[MDC Executor] Starting as main module...');
     main().catch(error => {
         console.error('Fatal error:', error);
         process.exit(1);
     });
+} else {
+    console.log('[MDC Executor] Loaded as library (not executing main)');
 }
 
 export { MDCExecutor };
