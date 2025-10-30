@@ -1,33 +1,17 @@
 {
   "browser": {
-    "headless": true,
+    "headless": false,
     "args": [
-      "--headless",
-      "--headless=new",
       "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--disable-software-rasterizer",
-      "--disable-extensions",
-      "--disable-background-networking",
-      "--disable-default-apps",
-      "--no-first-run",
-      "--no-zygote",
-      "--single-process",
-      "--disable-features=TranslateUI",
-      "--disable-features=BlinkGenPropertyTrees"
+      "--disable-setuid-sandbox"
     ]
   },
   "defaultTimeout": 30000,
   "launchOptions": {
-    "headless": true,
+    "headless": false,
     "args": [
-      "--headless",
       "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu"
+      "--disable-setuid-sandbox"
     ]
   }
 }

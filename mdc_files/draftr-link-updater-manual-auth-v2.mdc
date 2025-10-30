@@ -1,0 +1,134 @@
+# Draftr Link Updater (Manual Auth - Interactive Mode)
+
+**Use Playwright codegen for interactive testing with authentication**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID
+- `{{new_url}}` - New URL to update link to
+- `{{link_text}}` - Text of link to find
+
+## Keywords
+draftr, link, update, manual, auth, codegen, interactive
+
+---
+
+## 🎯 **SOLUTION: Use Playwright Codegen Instead!**
+
+Since the automation can't pause for login, use Playwright's **interactive codegen mode** instead:
+
+### **Step 1: Start Playwright Codegen**
+
+```bash
+cd "/Users/tansa/Desktop/Playwright mcp rule file/streamlit_mdc_app"
+
+# Start codegen with your browser profile (keeps you logged in)
+npx playwright codegen https://webpub.autodesk.com/draftr/asset/3934720
+```
+
+**This will:**
+- ✅ Open a real browser window
+- ✅ Keep it open as long as you want
+- ✅ Let you log in manually
+- ✅ Let you interact with the page
+- ✅ Record your actions automatically
+- ✅ Generate code you can use
+
+### **Step 2: Manual Steps in the Browser**
+
+1. 🔐 **Log in to Draftr** (take your time)
+2. 🔍 **Find the link** you want to update (e.g., "Get in touch")
+3. ✏️ **Click it** to open the editor
+4. 🔗 **Change the URL**
+5. 💾 **Click Save**
+6. ✅ **Done!**
+
+### **Step 3: Playwright Records Everything**
+
+While you do the above, Playwright records your actions and generates code like:
+
+```javascript
+await page.goto('https://webpub.autodesk.com/draftr/asset/3934720');
+await page.click('text=Get in touch');
+await page.fill('input[type="url"]', 'https://www.autodesk.com/uk/support');
+await page.click('button:has-text("Save")');
+```
+
+### **Step 4: Save the Generated Code**
+
+Copy the generated code and we can:
+- Convert it to an MDC file
+- Use the exact selectors Playwright found
+- Automate it next time
+
+---
+
+## 🚀 **Alternative: Use Persistent Browser Context**
+
+Run automation with a persistent browser profile (stays logged in):
+
+```bash
+# Start with user data dir (keeps cookies/session)
+npx playwright open \
+  --user-data-dir=/tmp/playwright-draftr \
+  https://webpub.autodesk.com/draftr/asset/3934720
+```
+
+**Log in once, then the browser remembers you!**
+
+---
+
+## 📝 **For Now: Manual Testing Steps**
+
+Until we solve the authentication:
+
+### **Test 1: Verify You Can Access Draftr**
+
+```bash
+npx playwright open https://webpub.autodesk.com/draftr/asset/3934720
+```
+
+- Can you log in?
+- Can you see the asset?
+- Can you find the "Get in touch" link?
+
+### **Test 2: Use Codegen to Record Actions**
+
+```bash
+npx playwright codegen https://webpub.autodesk.com/draftr/asset/3934720
+```
+
+- Log in
+- Click the link you want to edit
+- Change the URL  
+- Save
+- **Copy the generated selectors!**
+
+### **Test 3: Share the Selectors**
+
+Tell me what selectors Playwright found:
+- What's the selector for the link?
+- What's the selector for the URL input field?
+- What's the selector for the Save button?
+
+Then I can create an MDC file with the correct selectors!
+
+---
+
+## 🎯 **Why This Approach Works**
+
+✅ **No automation timer** - Take as long as you need  
+✅ **Real authentication** - Use SSO/2FA normally  
+✅ **Visual feedback** - See exactly what's happening  
+✅ **Records actions** - Auto-generates automation code  
+✅ **Persistent session** - Stay logged in between runs  
+
+---
+
+## 🔧 **Next Steps**
+
+1. **Run:** `npx playwright codegen https://webpub.autodesk.com/draftr/asset/3934720`
+2. **Log in** and perform the link update manually
+3. **Copy** the selectors Playwright generates
+4. **Share them** so I can create the proper MDC file
+
+**Try it now and tell me what selectors it generates!** 🎯

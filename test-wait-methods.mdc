@@ -1,0 +1,38 @@
+# Test Playwright Wait Methods
+
+Test different ways to wait/pause in Playwright
+
+## Keywords
+test, wait, pause, delay
+
+---
+
+## Test 1: Navigate
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://example.com"
+  }
+}
+```
+
+## Test 2: Try page.waitForTimeout (if available)
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "async () => { console.log('Starting 10 second wait...'); await new Promise(resolve => setTimeout(resolve, 10000)); console.log('Wait complete!'); return 'Waited 10 seconds'; }"
+  }
+}
+```
+
+## Test 3: Screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "test-after-wait"
+  }
+}
+```
