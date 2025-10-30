@@ -536,12 +536,21 @@ class MDCExecutor:
             
             # Check for Draftr cookies in secrets
             try:
+                print("🔍 Checking for authentication cookies...")
+                print(f"   hasattr(st, 'secrets'): {hasattr(st, 'secrets')}")
+                if hasattr(st, 'secrets'):
+                    print(f"   Available secrets: {list(st.secrets.keys())}")
+                    
                 if hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
                     print("🔐 Loading authentication cookies from secrets...")
                     cookies_json = st.secrets['DRAFTR_COOKIES']
                     cookies = json.loads(cookies_json)
                     context['cookies'] = cookies
                     print(f"✅ Loaded {len(cookies)} cookies for authentication")
+                else:
+                    print("❌ DRAFTR_COOKIES not found in secrets!")
+                    print("⚠️  Automation will run WITHOUT authentication")
+                    print("⚠️  You need to add cookies to Streamlit secrets")
             except Exception as e:
                 print(f"⚠️  Could not load cookies from secrets: {e}")
                 print("⚠️  Continuing without authentication cookies...")
