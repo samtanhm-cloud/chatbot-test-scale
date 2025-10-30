@@ -34,16 +34,16 @@ draftr, link, update, manual, auth, authentication, interactive
 }
 ```
 
-### Step 1.3: Wait 60 seconds for manual authentication
+### Step 1.3: Wait 3 MINUTES for manual authentication
 **⚠️ USER ACTION REQUIRED: Log in manually if prompted**
 ```mcp
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "() => new Promise(resolve => { console.log('⏸️  PAUSED FOR AUTHENTICATION'); console.log('🔐 Please log in to Draftr if you see a login page'); console.log('⏰ Waiting 60 seconds...'); setTimeout(() => { console.log('✅ Resuming automation'); resolve(); }, 60000); })"
+    "script": "() => new Promise(resolve => { console.log(''); console.log('='.repeat(60)); console.log('⏸️  🔐 AUTHENTICATION PAUSE - YOU HAVE 3 MINUTES'); console.log('='.repeat(60)); console.log(''); console.log('👉 PLEASE LOG IN TO DRAFTR NOW IF YOU SEE A LOGIN PAGE'); console.log(''); console.log('⏰ Countdown:'); let remaining = 180; const interval = setInterval(() => { remaining -= 10; console.log(`   ${remaining} seconds remaining...`); if (remaining <= 0) { clearInterval(interval); } }, 10000); setTimeout(() => { clearInterval(interval); console.log(''); console.log('✅ RESUMING AUTOMATION NOW'); console.log(''); resolve(); }, 180000); })"
   }
 }
-```
+```</invoke>
 
 ### Step 1.4: Check if we're logged in (look for Draftr UI elements)
 ```mcp
@@ -221,12 +221,13 @@ node mdc_executor.js mdc_files/draftr-link-updater-manual-auth.mdc \
   --context '{"variables":{"asset_id":"3934720","link_text":"get in touch","new_url":"www.autodesk.com/uk/support"}}'
 ```
 
-### **Step 3: Manual Login During 60-Second Pause**
+### **Step 3: Manual Login During 3-Minute Pause**
 
 1. 🖥️ Browser window opens
 2. 🔐 You see Draftr login page (or asset page if already logged in)
-3. ⏰ **You have 60 seconds to log in manually**
-4. ✅ Automation continues automatically after 60 seconds
+3. ⏰ **You have 3 MINUTES (180 seconds) to log in manually**
+4. ⏰ **Console shows countdown every 10 seconds**
+5. ✅ Automation continues automatically after 3 minutes
 
 ### **Step 4: Watch It Work!**
 
@@ -246,14 +247,18 @@ git checkout playwright-mcp-config.json
 
 ## ⚙️ **Adjusting the Wait Time**
 
-If 60 seconds isn't enough, edit **Step 1.3** and change:
+If 3 minutes isn't enough (default is 180 seconds), edit **Step 1.3** and change:
 ```javascript
-setTimeout(() => { resolve(); }, 60000);  // 60000 = 60 seconds
+let remaining = 180;  // Change to 240 for 4 minutes, 300 for 5 minutes
+...
+setTimeout(() => { resolve(); }, 180000);  // 180000 = 3 minutes
 ```
 
 To:
 ```javascript
-setTimeout(() => { resolve(); }, 120000);  // 120000 = 120 seconds (2 minutes)
+let remaining = 300;  // 5 minutes
+...
+setTimeout(() => { resolve(); }, 300000);  // 300000 = 5 minutes
 ```
 
 ---
