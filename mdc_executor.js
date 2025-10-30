@@ -185,7 +185,8 @@ class MDCExecutor {
                 // Playwright-specific
                 PLAYWRIGHT_HEADLESS: '1',
                 PLAYWRIGHT_CHROMIUM_NO_SANDBOX: '1',
-                PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
+                // CRITICAL: Force local browser path (0 = use node_modules/.local-browsers/)
+                PLAYWRIGHT_BROWSERS_PATH: '0',
                 // Generic browser flags
                 BROWSER_HEADLESS: 'true',
                 HEADLESS: 'true',
@@ -199,6 +200,7 @@ class MDCExecutor {
             
             console.log(`[MCP Server] Environment configured:`);
             console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
+            console.log(`[MCP Server]   PLAYWRIGHT_BROWSERS_PATH: ${env.PLAYWRIGHT_BROWSERS_PATH} (0=local)`);
             console.log(`[MCP Server]   DISPLAY: ${env.DISPLAY || 'not set'}`);
             console.log(`[MCP Server]   NO_SANDBOX: ${env.NO_SANDBOX}`);
             

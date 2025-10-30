@@ -169,27 +169,34 @@ def install_dependencies_if_needed():
         
         # Install browsers for playwright-core (used by MCP server)
         # MCP server looks in: node_modules/playwright-core/.local-browsers/
+        # CRITICAL: Set PLAYWRIGHT_BROWSERS_PATH=0 to force LOCAL installation
+        
+        logs.append(f"   Started at: {datetime.now().strftime('%H:%M:%S')}")
+        logs.append(f"   Target: node_modules/playwright-core/.local-browsers/")
+        
+        # Prepare environment with LOCAL browser installation flag
+        install_env = os.environ.copy()
+        install_env['PLAYWRIGHT_BROWSERS_PATH'] = '0'  # Force local installation
+        logs.append(f"   PLAYWRIGHT_BROWSERS_PATH=0 (forces local install)")
+        
         install_commands = [
             {
                 'cmd': ['node', 'node_modules/playwright-core/cli.js', 'install', 'chromium'],
-                'desc': 'Root playwright-core (primary)'
+                'desc': 'playwright-core CLI (local mode)',
+                'env': install_env
             },
             {
                 'cmd': ['npx', 'playwright-core', 'install', 'chromium'],
-                'desc': 'playwright-core via npx'
-            },
-            {
-                'cmd': ['npx', 'playwright', 'install', 'chromium'],
-                'desc': 'Global Playwright (backup)'
+                'desc': 'playwright-core via npx (local mode)',
+                'env': install_env
             }
         ]
         
-        logs.append(f"   Started at: {datetime.now().strftime('%H:%M:%S')}")
         all_successful = False
         
         for install_cmd in install_commands:
-            logs.append(f"   Installing for: {install_cmd['desc']}")
-            logs.append(f"   Command: {' '.join(install_cmd['cmd'][:3])}...")
+            logs.append(f"   Installing: {install_cmd['desc']}")
+            logs.append(f"   Command: {' '.join(install_cmd['cmd'][:4])}...")
             
             try:
                 start_time = time.time()
@@ -198,7 +205,8 @@ def install_dependencies_if_needed():
                     cwd=Path(__file__).parent,
                     capture_output=True,
                     text=True,
-                    timeout=300  # 5 minute timeout
+                    timeout=300,  # 5 minute timeout
+                    env=install_cmd.get('env', os.environ.copy())  # Use custom env if provided
                 )
                 elapsed = time.time() - start_time
                 
