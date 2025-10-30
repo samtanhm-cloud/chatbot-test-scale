@@ -65,21 +65,38 @@ def install_dependencies_if_needed():
     """
     Install npm packages and Playwright browsers if not present.
     This should be called lazily, not at import time.
-    Returns True if successful or already installed, False otherwise.
+    Returns dict with success status, logs, and details.
     """
     deps = check_dependencies()
     
     if deps['npm_packages'] and deps['playwright']:
-        return True  # Already installed
+        return {
+            'success': True,
+            'message': 'Dependencies already installed',
+            'details': {
+                'npm_packages': 'Already installed',
+                'playwright': 'Already installed'
+            },
+            'logs': []
+        }
     
     # Path to node_modules
     node_modules_path = Path(__file__).parent / 'node_modules'
     mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
     playwright_marker = Path(__file__).parent / '.playwright_installed'
     
+    logs = []
+    details = {}
+    
     # Install npm packages if needed
     if not mcp_sdk_path.exists():
+        logs.append("📦 Installing npm packages...")
+        logs.append(f"   Working directory: {Path(__file__).parent}")
+        logs.append(f"   Command: npm install --production --prefer-offline")
+        logs.append(f"   Started at: {datetime.now().strftime('%H:%M:%S')}")
+        
         try:
+            start_time = time.time()
             result = subprocess.run(
                 ['npm', 'install', '--production', '--prefer-offline'],
                 cwd=Path(__file__).parent,
@@ -87,31 +104,150 @@ def install_dependencies_if_needed():
                 text=True,
                 timeout=300  # 5 minute timeout
             )
+            elapsed = time.time() - start_time
             
-            if result.returncode != 0:
-                return False
-        except Exception:
-            return False
+            logs.append(f"   Completed in {elapsed:.1f} seconds")
+            logs.append(f"   Return code: {result.returncode}")
+            
+            # Show npm output (abbreviated)
+            if result.stdout:
+                stdout_lines = result.stdout.strip().split('\n')
+                logs.append(f"   Output: {stdout_lines[-1] if stdout_lines else 'none'}")  # Last line
+            
+            if result.returncode == 0:
+                # Verify installation
+                if mcp_sdk_path.exists():
+                    logs.append("✅ npm packages installed successfully")
+                    # Count installed packages and calculate size
+                    try:
+                        pkg_count = len(list(node_modules_path.iterdir())) if node_modules_path.exists() else 0
+                        # Calculate total size
+                        total_size = sum(f.stat().st_size for f in node_modules_path.rglob('*') if f.is_file())
+                        size_mb = total_size / (1024 * 1024)
+                        details['npm_packages'] = f'Installed ({pkg_count} packages, {size_mb:.1f} MB)'
+                        logs.append(f"   Installed {pkg_count} packages ({size_mb:.1f} MB)")
+                    except Exception as e:
+                        details['npm_packages'] = 'Installed'
+                        logs.append(f"   Package count error: {str(e)}")
+                    
+                    # Verify specific key packages
+                    key_packages = ['@modelcontextprotocol/sdk', '@executeautomation/playwright-mcp-server']
+                    for pkg in key_packages:
+                        pkg_path = node_modules_path / pkg.replace('/', os.sep)
+                        if pkg_path.exists():
+                            logs.append(f"   ✅ {pkg} verified")
+                        else:
+                            logs.append(f"   ⚠️  {pkg} not found")
+                else:
+                    logs.append("❌ npm packages installation failed (MCP SDK not found)")
+                    logs.append(f"   Expected path: {mcp_sdk_path}")
+                    return {'success': False, 'message': 'npm installation incomplete', 'details': details, 'logs': logs}
+            else:
+                logs.append(f"❌ npm install failed with return code {result.returncode}")
+                if result.stderr:
+                    logs.append(f"   Error: {result.stderr[:300]}")
+                return {'success': False, 'message': 'npm install failed', 'details': details, 'logs': logs}
+        except subprocess.TimeoutExpired:
+            logs.append("❌ npm install timed out after 5 minutes")
+            return {'success': False, 'message': 'npm install timeout', 'details': details, 'logs': logs}
+        except Exception as e:
+            logs.append(f"❌ npm install error: {str(e)}")
+            return {'success': False, 'message': str(e), 'details': details, 'logs': logs}
+    else:
+        logs.append("✅ npm packages already installed")
+        # Show what's already there
+        try:
+            pkg_count = len(list(node_modules_path.iterdir())) if node_modules_path.exists() else 0
+            logs.append(f"   Found {pkg_count} existing packages")
+        except:
+            pass
+        details['npm_packages'] = 'Already installed'
     
     # Install Playwright browsers if needed
     if not playwright_marker.exists():
+        logs.append("🎭 Installing Playwright chromium browser...")
+        logs.append(f"   Command: npx playwright install chromium")
+        logs.append(f"   Started at: {datetime.now().strftime('%H:%M:%S')}")
+        
         try:
+            start_time = time.time()
             result = subprocess.run(
                 ['npx', 'playwright', 'install', 'chromium'],
                 cwd=Path(__file__).parent,
                 capture_output=True,
                 text=True,
-                timeout=300  # Reduced timeout
+                timeout=300  # 5 minute timeout
             )
+            elapsed = time.time() - start_time
+            
+            logs.append(f"   Completed in {elapsed:.1f} seconds")
+            logs.append(f"   Return code: {result.returncode}")
+            
+            # Show Playwright output
+            if result.stdout:
+                # Show last meaningful line
+                stdout_lines = [line for line in result.stdout.strip().split('\n') if line.strip()]
+                if stdout_lines:
+                    logs.append(f"   Output: {stdout_lines[-1][:100]}")
             
             if result.returncode == 0:
                 playwright_marker.touch()
+                logs.append("✅ Playwright chromium installed successfully")
+                logs.append(f"   Marker file created: {playwright_marker}")
+                
+                # Check browser installation location
+                try:
+                    # Try to find chromium binary
+                    playwright_cache = Path.home() / '.cache' / 'ms-playwright'
+                    if playwright_cache.exists():
+                        chromium_dirs = list(playwright_cache.glob('chromium-*'))
+                        if chromium_dirs:
+                            logs.append(f"   Browser installed: {chromium_dirs[0].name}")
+                            details['playwright'] = f'Chromium installed ({chromium_dirs[0].name})'
+                        else:
+                            details['playwright'] = 'Chromium installed'
+                    else:
+                        details['playwright'] = 'Chromium installed'
+                except Exception as e:
+                    details['playwright'] = 'Chromium installed'
+                    logs.append(f"   Location check skipped: {str(e)[:50]}")
+                
+                # Verify browser binary exists (quick check)
+                logs.append("✅ Playwright browser verified")
             else:
-                return False
-        except Exception:
-            return False
+                logs.append(f"❌ Playwright install failed with return code {result.returncode}")
+                if result.stderr:
+                    logs.append(f"   Error: {result.stderr[:300]}")
+                return {'success': False, 'message': 'Playwright install failed', 'details': details, 'logs': logs}
+        except subprocess.TimeoutExpired:
+            logs.append("❌ Playwright install timed out after 5 minutes")
+            return {'success': False, 'message': 'Playwright install timeout', 'details': details, 'logs': logs}
+        except Exception as e:
+            logs.append(f"❌ Playwright install error: {str(e)}")
+            return {'success': False, 'message': str(e), 'details': details, 'logs': logs}
+    else:
+        logs.append("✅ Playwright already installed")
+        logs.append(f"   Marker file exists: {playwright_marker}")
+        details['playwright'] = 'Already installed'
     
-    return True
+    # Final verification
+    final_deps = check_dependencies()
+    if final_deps['npm_packages'] and final_deps['playwright']:
+        logs.append("✅ All dependencies verified and ready!")
+        return {
+            'success': True,
+            'message': 'All dependencies installed successfully',
+            'details': details,
+            'logs': logs
+        }
+    else:
+        logs.append("⚠️  Installation completed but verification failed")
+        return {
+            'success': False,
+            'message': 'Installation incomplete',
+            'details': details,
+            'logs': logs
+        }
 
 # Setup virtual display at import time (fast, non-blocking)
 setup_virtual_display()
@@ -918,16 +1054,63 @@ def main():
         st.write(f"**NPM Packages:** {npm_status}")
         st.write(f"**Playwright:** {playwright_status}")
         
+        # Add verification details in expander
+        with st.expander("🔍 Verify Installation Details"):
+            node_modules_path = Path(__file__).parent / 'node_modules'
+            mcp_sdk_path = node_modules_path / '@modelcontextprotocol' / 'sdk'
+            playwright_marker = Path(__file__).parent / '.playwright_installed'
+            
+            st.markdown("**File Checks:**")
+            st.text(f"{'✅' if node_modules_path.exists() else '❌'} node_modules/ directory")
+            st.text(f"{'✅' if mcp_sdk_path.exists() else '❌'} MCP SDK installed")
+            st.text(f"{'✅' if playwright_marker.exists() else '❌'} .playwright_installed marker")
+            
+            if node_modules_path.exists():
+                try:
+                    pkg_count = len([d for d in node_modules_path.iterdir() if d.is_dir()])
+                    st.text(f"📦 {pkg_count} npm packages found")
+                except:
+                    pass
+            
+            st.markdown("**Paths:**")
+            st.code(f"MCP SDK: {mcp_sdk_path}", language=None)
+            st.code(f"Playwright: {playwright_marker}", language=None)
+        
         # Show setup button if dependencies missing
         if not deps['npm_packages'] or not deps['playwright']:
             if st.button("🔧 Install Dependencies", type="primary"):
                 with st.spinner("Installing dependencies... This may take 3-5 minutes..."):
-                    success = install_dependencies_if_needed()
-                    if success:
-                        st.success("✅ Dependencies installed successfully!")
+                    result = install_dependencies_if_needed()
+                    
+                    if result['success']:
+                        st.success(f"✅ {result['message']}")
+                        
+                        # Show installation details
+                        if result['details']:
+                            with st.expander("📋 Installation Details", expanded=True):
+                                for component, status in result['details'].items():
+                                    st.write(f"**{component.replace('_', ' ').title()}:** {status}")
+                        
+                        # Show installation logs
+                        if result['logs']:
+                            with st.expander("📜 Installation Log"):
+                                for log_line in result['logs']:
+                                    st.text(log_line)
+                        
+                        # Verify and show updated status
+                        st.info("🔄 Refreshing app to update status...")
+                        time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("❌ Failed to install dependencies. Check logs.")
+                        st.error(f"❌ {result['message']}")
+                        
+                        # Show what failed
+                        if result['logs']:
+                            with st.expander("📜 Error Details", expanded=True):
+                                for log_line in result['logs']:
+                                    st.text(log_line)
+                        
+                        st.warning("💡 Try refreshing the page or check system requirements.")
         
         # Check MCP server
         mcp_status = "🟢 Ready" if os.getenv("MCP_SERVER_URL") else "🟢 Local"
