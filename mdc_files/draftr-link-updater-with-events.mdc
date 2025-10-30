@@ -1,0 +1,220 @@
+# Draftr Link Updater (With Event Triggers)
+
+**Updates links in Draftr using JavaScript + proper event triggering**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID
+- `{{new_url}}` - New URL to update link to
+- `{{link_text}}` - Text of link to find
+
+## Keywords
+draftr, link, update, javascript, events, automation
+
+---
+
+## PHASE 1: Navigate & Load
+
+### Step 1.1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+### Step 1.2: Wait for page load
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+### Step 1.3: Take initial screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-initial-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 2: Extract Current Links
+
+### Step 2.1: Get all links
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalLinks: links.length, links: links }; }"
+  }
+}
+```
+
+---
+
+## PHASE 3: Find and Click the Link to Edit
+
+### Step 3.1: Find link by text and click it
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const linkText = '{{link_text}}'; const links = Array.from(document.querySelectorAll('a[href]')); const targetLink = links.find(a => a.textContent.trim().toLowerCase().includes(linkText.toLowerCase())); if (targetLink) { targetLink.click(); targetLink.scrollIntoView({ behavior: 'smooth', block: 'center' }); return { found: true, linkText: targetLink.textContent.trim(), currentHref: targetLink.href, action: 'Clicked link to open editor' }; } else { return { found: false, searchedFor: linkText, availableLinks: links.map(a => a.textContent.trim()).slice(0, 10) }; } }"
+  }
+}
+```
+
+### Step 3.2: Wait for link editor to appear
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 3.3: Take screenshot of editor
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-editor-open-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 4: Update Link Using UI
+
+### Step 4.1: Find and focus link input field
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const inputs = Array.from(document.querySelectorAll('input[type=\"text\"], input[type=\"url\"], input:not([type])')); let linkInput = inputs.find(input => input.value && (input.value.startsWith('http') || input.value.includes('.'))); if (!linkInput) { linkInput = inputs.find(input => input.placeholder && (input.placeholder.toLowerCase().includes('url') || input.placeholder.toLowerCase().includes('link'))); } if (linkInput) { linkInput.focus(); linkInput.select(); return { found: true, currentValue: linkInput.value, placeholder: linkInput.placeholder, selector: linkInput.className || linkInput.id || 'input' }; } else { return { found: false, totalInputs: inputs.length, inputTypes: inputs.map(i => ({ type: i.type, value: i.value, placeholder: i.placeholder })).slice(0, 5) }; } }"
+  }
+}
+```
+
+### Step 4.2: Clear current value and type new URL
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const newUrl = '{{new_url}}'; const fullUrl = newUrl.startsWith('http') ? newUrl : 'https://' + newUrl; const activeInput = document.activeElement; if (activeInput && activeInput.tagName === 'INPUT') { const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; nativeInputValueSetter.call(activeInput, fullUrl); activeInput.dispatchEvent(new Event('input', { bubbles: true })); activeInput.dispatchEvent(new Event('change', { bubbles: true })); activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); activeInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true })); return { success: true, newValue: activeInput.value, fullUrl: fullUrl, events: 'Triggered input, change, and enter key events' }; } else { return { success: false, error: 'No active input field', activeElement: document.activeElement ? document.activeElement.tagName : 'none' }; } }"
+  }
+}
+```
+
+### Step 4.3: Wait for change to register
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 4.4: Screenshot after update
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-after-update-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 5: Save Changes
+
+### Step 5.1: Find and click Save button
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const saveSelectors = [ () => document.querySelector('.draftr__menu-item') && Array.from(document.querySelectorAll('.draftr__menu-item')).find(el => el.textContent.trim().toLowerCase() === 'save'), () => document.querySelector('button') && Array.from(document.querySelectorAll('button')).find(btn => btn.textContent.trim().toLowerCase().includes('save')), () => document.querySelector('[aria-label*=\"save\" i]'), () => document.querySelector('button[class*=\"save\" i]') ]; let saveButton = null; let usedSelector = null; for (let i = 0; i < saveSelectors.length; i++) { saveButton = saveSelectors[i](); if (saveButton) { usedSelector = i; break; } } if (saveButton) { saveButton.click(); return { success: true, buttonText: saveButton.textContent.trim(), selectorIndex: usedSelector, action: 'Clicked Save button' }; } else { return { success: false, error: 'Save button not found', testedSelectors: saveSelectors.length }; } }"
+  }
+}
+```
+
+### Step 5.2: Wait for save operation
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 3000))"
+  }
+}
+```
+
+### Step 5.3: Verify save
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const notification = document.querySelector('[class*=\"notification\" i], [class*=\"toast\" i], [class*=\"success\" i], [class*=\"saved\" i]'); return { saveComplete: true, notificationFound: !!notification, notificationText: notification ? notification.textContent.trim() : 'No notification', timestamp: new Date().toISOString() }; }"
+  }
+}
+```
+
+### Step 5.4: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-saved-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## ⚠️ Important Notes
+
+### How This Works:
+1. ✅ Finds link by text and clicks it
+2. ✅ Waits for link editor to open
+3. ✅ Finds the URL input field
+4. ✅ Updates value using native setter
+5. ✅ Triggers proper input/change events
+6. ✅ Simulates Enter key press
+7. ✅ Finds and clicks Save button
+8. ✅ Verifies save was successful
+
+### Why Event Triggering Matters:
+- Simply changing `element.value` doesn't work with modern web apps
+- React/Vue/Angular require proper event dispatching
+- This approach triggers `input`, `change`, and `keydown` events
+- Mimics real user interaction
+
+### Authentication:
+- ⚠️ **You must be logged into Draftr** before running this
+- Works best when run locally (uses your browser session)
+- For Streamlit Cloud, consider using Draftr API instead
+
+---
+
+## 🚀 Usage
+
+```
+run mdc on https://webpub.autodesk.com/draftr/asset/3934720 
+and change link in "get in touch" to "www.autodesk.com/uk/support"
+```
+
+Expected variables:
+- `asset_id`: 3934720
+- `link_text`: get in touch
+- `new_url`: www.autodesk.com/uk/support

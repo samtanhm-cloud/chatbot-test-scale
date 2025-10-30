@@ -1,0 +1,92 @@
+# Draftr Save Button Test
+
+**Quick test to verify Save button selector works**
+
+## Keywords
+draftr, save, test, button
+
+---
+
+## Step 1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+## Step 2: Wait for page load
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+## Step 3: Take screenshot before
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-before-save-test"
+  }
+}
+```
+
+## Step 4: Check if Save button exists
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const saveButtons = []; document.querySelectorAll('*').forEach(el => { const text = el.textContent.trim(); const classes = el.className; if (text.toLowerCase().includes('save') && el.tagName !== 'BODY' && el.tagName !== 'HTML') { saveButtons.push({ tag: el.tagName, text: text.substring(0, 50), classes: classes, selector: el.className ? '.' + el.className.split(' ').join('.') : el.tagName.toLowerCase() }); } }); return { totalSaveElements: saveButtons.length, saveElements: saveButtons.slice(0, 10), searchedFor: 'Save', timestamp: new Date().toISOString() }; }"
+  }
+}
+```
+
+## Step 5: Try multiple Save button selectors
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const selectors = [ '.draftr__menu-item:has-text(\"Save\")', 'button:has-text(\"Save\")', '[aria-label*=\"Save\"]', 'button[aria-label*=\"Save\"]', '.save-button', 'button.save' ]; const results = []; selectors.forEach(sel => { try { const el = document.querySelector(sel); results.push({ selector: sel, found: !!el, visible: el ? window.getComputedStyle(el).display !== 'none' : false, text: el ? el.textContent.trim().substring(0, 30) : null }); } catch(e) { results.push({ selector: sel, found: false, error: e.message }); } }); return { testedSelectors: results, recommendation: results.find(r => r.found && r.visible) ? results.find(r => r.found && r.visible).selector : 'No working selector found' }; }"
+  }
+}
+```
+
+## Step 6: Get all menu items
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const menuItems = []; document.querySelectorAll('.draftr__menu-item, [class*=\"menu\"]').forEach(el => { menuItems.push({ outerHTML: el.outerHTML.substring(0, 200), text: el.textContent.trim(), visible: window.getComputedStyle(el).display !== 'none' }); }); return { totalMenuItems: menuItems.length, menuItems: menuItems.slice(0, 10) }; }"
+  }
+}
+```
+
+## Step 7: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-save-button-analysis"
+  }
+}
+```
+
+---
+
+## Usage
+
+Run this to diagnose the Save button:
+```
+run save test on draftr asset 3934720
+```
+
+This will tell you:
+- ✅ Which Save button selectors work
+- ✅ What menu items exist
+- ✅ What selector to use for clicking Save
