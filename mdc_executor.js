@@ -322,6 +322,8 @@ class MDCExecutor {
                 // CRITICAL: Force Chrome browser channel
                 PLAYWRIGHT_BROWSER_CHANNEL: 'chrome',
                 BROWSER_CHANNEL: 'chrome',
+                // CRITICAL: Force Chrome executable path
+                PLAYWRIGHT_EXECUTABLE_PATH: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 // Pass launch options as JSON (some MCP servers read this)
                 PLAYWRIGHT_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
                 BROWSER_LAUNCH_OPTIONS: JSON.stringify(launchOptions),
@@ -338,6 +340,7 @@ class MDCExecutor {
             
             console.log(`[MCP Server] Environment configured:`);
             console.log(`[MCP Server]   PLAYWRIGHT_BROWSER_CHANNEL: ${env.PLAYWRIGHT_BROWSER_CHANNEL} (CHROME!)`);
+            console.log(`[MCP Server]   PLAYWRIGHT_EXECUTABLE_PATH: ${env.PLAYWRIGHT_EXECUTABLE_PATH}`);
             console.log(`[MCP Server]   PLAYWRIGHT_HEADLESS: ${env.PLAYWRIGHT_HEADLESS}`);
             console.log(`[MCP Server]   PLAYWRIGHT_BROWSERS_PATH: ${env.PLAYWRIGHT_BROWSERS_PATH} (0=local)`);
             console.log(`[MCP Server]   PLAYWRIGHT_LAUNCH_OPTIONS: ${env.PLAYWRIGHT_LAUNCH_OPTIONS}`);
