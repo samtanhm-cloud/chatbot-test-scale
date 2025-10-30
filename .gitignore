@@ -16,6 +16,10 @@ ENV/
 # Streamlit
 .streamlit/secrets.toml
 
+# Authentication session files (never commit!)
+auth/
+*.session.json
+
 # Node.js
 node_modules/
 npm-debug.log

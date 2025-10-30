@@ -86,26 +86,28 @@ class MDCExecutor {
             console.log('[MDC Executor] Starting Playwright MCP server...');
             await this.startMCPConnection();
             
-            // Handle authentication (IDSDK token or cookies)
-            const hasToken = context.autodesk_token && context.autodesk_token.length > 0;
-            const hasCookies = context.cookies && Array.isArray(context.cookies) && context.cookies.length > 0;
+            // Check authentication method
+            const fs = await import('fs');
+            const path = await import('path');
+            const sessionFile = path.join(process.cwd(), 'auth', 'draftr-session.json');
             
-            if (hasToken || hasCookies) {
-                console.log(`[MDC Executor] 🔐 Authentication method: ${hasToken ? 'IDSDK OAuth Token' : 'Session Cookies'}`);
+            // Method 1: Persistent Browser Session (BEST - automatic, no manual injection!)
+            if (fs.existsSync(sessionFile)) {
+                console.log(`[MDC Executor] 🔐 Authentication: Persistent Browser Session`);
+                console.log(`[MDC Executor] ✅ Using saved session from: ${sessionFile}`);
+                console.log(`[MDC Executor] 💡 Browser will already be logged in!`);
+                // Session is loaded automatically by Playwright MCP via config
+                // No manual injection needed!
             }
-            
-            // Method 1: IDSDK OAuth Token (PREFERRED - more secure!)
-            if (hasToken) {
-                console.log(`[MDC Executor] Setting up OAuth token authentication...`);
+            // Method 2: IDSDK OAuth Token (FALLBACK)
+            else if (context.autodesk_token && context.autodesk_token.length > 0) {
+                console.log(`[MDC Executor] 🔐 Authentication: IDSDK OAuth Token`);
                 try {
-                    // Set Authorization header for all requests
                     const headerScript = `async () => {
-                        // Store token in sessionStorage for persistence
                         sessionStorage.setItem('autodesk_token', '${context.autodesk_token}');
                         return { token_set: true };
                     }`;
                     
-                    // Navigate to base domain first
                     await this.mcpClient.callTool({
                         name: 'playwright_navigate',
                         arguments: { url: 'https://webpub.autodesk.com' }
@@ -116,29 +118,20 @@ class MDCExecutor {
                         arguments: { script: headerScript }
                     });
                     
-                    // Set extra HTTP headers with Authorization
-                    // Note: Playwright's setExtraHTTPHeaders would be ideal here,
-                    // but we'll inject token via localStorage/sessionStorage
-                    // which Draftr's client-side code will use
-                    
                     console.log(`[MDC Executor] ✅ OAuth token configured`);
                 } catch (error) {
                     console.warn(`[MDC Executor] ⚠️  Token setup failed:`, error.message);
-                    console.warn(`[MDC Executor] Continuing anyway - authentication may fail`);
                 }
             }
-            
-            // Method 2: Session Cookies (FALLBACK - if no token available)
-            else if (hasCookies) {
-                console.log(`[MDC Executor] Injecting ${context.cookies.length} authentication cookies...`);
+            // Method 3: Session Cookies (LAST RESORT)
+            else if (context.cookies && Array.isArray(context.cookies) && context.cookies.length > 0) {
+                console.log(`[MDC Executor] 🔐 Authentication: Session Cookies (consider upgrading to persistent session)`);
                 try {
-                    // Navigate to base domain first (cookies need a page context)
                     await this.mcpClient.callTool({
                         name: 'playwright_navigate',
                         arguments: { url: 'https://webpub.autodesk.com' }
                     });
                     
-                    // Inject cookies using evaluate
                     const cookieScript = `async () => {
                         const cookies = ${JSON.stringify(context.cookies)};
                         for (const cookie of cookies) {
@@ -147,16 +140,20 @@ class MDCExecutor {
                         return { injected: cookies.length };
                     }`;
                     
-                    const result = await this.mcpClient.callTool({
+                    await this.mcpClient.callTool({
                         name: 'playwright_evaluate',
                         arguments: { script: cookieScript }
                     });
                     
-                    console.log(`[MDC Executor] ✅ Cookies injected successfully`);
+                    console.log(`[MDC Executor] ✅ Cookies injected`);
                 } catch (error) {
                     console.warn(`[MDC Executor] ⚠️  Cookie injection failed:`, error.message);
-                    console.warn(`[MDC Executor] Continuing anyway - authentication may fail`);
                 }
+            }
+            // No authentication
+            else {
+                console.log(`[MDC Executor] ⚠️  No authentication configured!`);
+                console.log(`[MDC Executor] 💡 Run: node setup_draftr_auth.js`);
             }
             
             // Execute commands sequentially
