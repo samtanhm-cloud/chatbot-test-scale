@@ -239,7 +239,7 @@ def install_dependencies_if_needed():
             logs.append("   ⚠️  Installation succeeded but binary not found at expected path")
             logs.append(f"   Expected: {expected_browser_path}")
             details['playwright'] = 'Installed (location unclear)'
-    else:
+        else:
             logs.append("   ❌ Browser binary NOT found")
             logs.append("   ⚠️  All installation methods failed")
             playwright_marker.touch()  # Mark as attempted to avoid retry loops
