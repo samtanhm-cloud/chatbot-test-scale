@@ -216,16 +216,26 @@ def install_dependencies_if_needed():
                 logs.append(f"   ⚠️  {install_cmd['desc']} error: {str(e)[:50]}")
                 continue
         
-        # After trying all methods, mark as installed if any succeeded
-        if all_successful:
+        # After trying all methods, verify browser binary exists
+        expected_browser_path = Path(__file__).parent / 'node_modules' / 'playwright-core' / '.local-browsers' / 'chromium-1179' / 'chrome-linux' / 'chrome'
+        logs.append(f"   Checking for browser at: {expected_browser_path}")
+        
+        if expected_browser_path.exists():
+            logs.append(f"   ✅ Browser binary FOUND at expected location!")
+            logs.append(f"   Binary size: {expected_browser_path.stat().st_size / (1024*1024):.1f} MB")
             playwright_marker.touch()
-            logs.append("✅ Playwright chromium installed successfully")
-            logs.append(f"   Marker file created: {playwright_marker}")
-            details['playwright'] = 'Chromium installed'
+            details['playwright'] = 'Chromium installed and verified'
+            all_successful = True
+        elif all_successful:
+            playwright_marker.touch()
+            logs.append("   ⚠️  Installation succeeded but binary not found at expected path")
+            logs.append(f"   Expected: {expected_browser_path}")
+            details['playwright'] = 'Installed (location unclear)'
         else:
-            logs.append("⚠️  Playwright installation uncertain - marking complete anyway")
+            logs.append("   ❌ Browser binary NOT found")
+            logs.append("   ⚠️  All installation methods failed")
             playwright_marker.touch()  # Mark as attempted to avoid retry loops
-            details['playwright'] = 'Installation attempted'
+            details['playwright'] = 'Installation failed - try Force Reinstall'
     else:
         logs.append("✅ Playwright already installed")
         logs.append(f"   Marker file exists: {playwright_marker}")
@@ -1086,11 +1096,14 @@ def main():
             st.code(f"MCP SDK: {mcp_sdk_path}", language=None)
             st.code(f"Playwright: {playwright_marker}", language=None)
         
-        # Show setup button if dependencies missing
-        if not deps['npm_packages'] or not deps['playwright']:
-            if st.button("🔧 Install Dependencies", type="primary"):
-                with st.spinner("Installing dependencies... This may take 3-5 minutes..."):
-                    result = install_dependencies_if_needed()
+        # Show setup button if dependencies missing OR force reinstall option
+        col_inst1, col_inst2 = st.columns([2, 1])
+        
+        with col_inst1:
+            if not deps['npm_packages'] or not deps['playwright']:
+                if st.button("🔧 Install Dependencies", type="primary", use_container_width=True):
+                    with st.spinner("Installing dependencies... This may take 3-5 minutes..."):
+                        result = install_dependencies_if_needed()
                     
                     if result['success']:
                         st.success(f"✅ {result['message']}")
@@ -1121,6 +1134,29 @@ def main():
                                     st.text(log_line)
                         
                         st.warning("💡 Try refreshing the page or check system requirements.")
+        
+        with col_inst2:
+            # Force reinstall option (delete marker file)
+            if deps['playwright']:
+                if st.button("🔄 Force Reinstall", use_container_width=True):
+                    playwright_marker = Path(__file__).parent / '.playwright_installed'
+                    if playwright_marker.exists():
+                        playwright_marker.unlink()
+                        st.success("✅ Marker deleted. Click 'Install Dependencies' to reinstall.")
+                        st.rerun()
+        
+        # Check actual browser binary location
+        with st.expander("🔍 Browser Binary Check"):
+            expected_browser_path = Path(__file__).parent / 'node_modules' / 'playwright-core' / '.local-browsers' / 'chromium-1179' / 'chrome-linux' / 'chrome'
+            st.text(f"Expected path:")
+            st.code(str(expected_browser_path), language=None)
+            
+            if expected_browser_path.exists():
+                st.success("✅ Browser binary exists!")
+                st.text(f"Size: {expected_browser_path.stat().st_size / (1024*1024):.1f} MB")
+            else:
+                st.error("❌ Browser binary NOT found at expected path")
+                st.warning("This is why automation is failing. Click 'Force Reinstall' above.")
         
         # Check MCP server
         mcp_status = "🟢 Ready" if os.getenv("MCP_SERVER_URL") else "🟢 Local"
