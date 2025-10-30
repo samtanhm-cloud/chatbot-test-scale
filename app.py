@@ -200,14 +200,14 @@ def install_dependencies_if_needed():
             
             try:
                 start_time = time.time()
-            result = subprocess.run(
+                result = subprocess.run(
                     install_cmd['cmd'],
-                cwd=Path(__file__).parent,
-                capture_output=True,
-                text=True,
+                    cwd=Path(__file__).parent,
+                    capture_output=True,
+                    text=True,
                     timeout=300,  # 5 minute timeout
                     env=install_cmd.get('env', os.environ.copy())  # Use custom env if provided
-            )
+                )
                 elapsed = time.time() - start_time
                 
                 logs.append(f"   Completed in {elapsed:.1f} seconds")
