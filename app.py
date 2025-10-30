@@ -530,6 +530,22 @@ class MDCExecutor:
                     mdc_path
                 ]
             
+            # Load cookies from secrets if available (for authentication)
+            if not context:
+                context = {}
+            
+            # Check for Draftr cookies in secrets
+            try:
+                if hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
+                    print("🔐 Loading authentication cookies from secrets...")
+                    cookies_json = st.secrets['DRAFTR_COOKIES']
+                    cookies = json.loads(cookies_json)
+                    context['cookies'] = cookies
+                    print(f"✅ Loaded {len(cookies)} cookies for authentication")
+            except Exception as e:
+                print(f"⚠️  Could not load cookies from secrets: {e}")
+                print("⚠️  Continuing without authentication cookies...")
+            
             # Add context if provided
             if context:
                 cmd.extend(["--context", json.dumps(context)])

@@ -86,6 +86,37 @@ class MDCExecutor {
             console.log('[MDC Executor] Starting Playwright MCP server...');
             await this.startMCPConnection();
             
+            // Inject cookies if provided (for authentication)
+            if (context.cookies && Array.isArray(context.cookies) && context.cookies.length > 0) {
+                console.log(`[MDC Executor] Injecting ${context.cookies.length} authentication cookies...`);
+                try {
+                    // Navigate to base domain first (cookies need a page context)
+                    await this.mcpClient.callTool({
+                        name: 'playwright_navigate',
+                        arguments: { url: 'https://webpub.autodesk.com' }
+                    });
+                    
+                    // Inject cookies using evaluate
+                    const cookieScript = `async () => {
+                        const cookies = ${JSON.stringify(context.cookies)};
+                        for (const cookie of cookies) {
+                            document.cookie = \`\${cookie.name}=\${cookie.value}; domain=\${cookie.domain}; path=\${cookie.path || '/'}; \${cookie.secure ? 'secure;' : ''} \${cookie.sameSite ? 'samesite=' + cookie.sameSite + ';' : ''}\`;
+                        }
+                        return { injected: cookies.length };
+                    }`;
+                    
+                    const result = await this.mcpClient.callTool({
+                        name: 'playwright_evaluate',
+                        arguments: { script: cookieScript }
+                    });
+                    
+                    console.log(`[MDC Executor] ✅ Cookies injected successfully`);
+                } catch (error) {
+                    console.warn(`[MDC Executor] ⚠️  Cookie injection failed:`, error.message);
+                    console.warn(`[MDC Executor] Continuing anyway - authentication may fail`);
+                }
+            }
+            
             // Execute commands sequentially
             const results = [];
             for (let i = 0; i < commands.length; i++) {
