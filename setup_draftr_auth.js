@@ -71,13 +71,14 @@ async function main() {
         });
     }
     
-    console.log('🚀 Launching browser...');
+    console.log('🚀 Launching Chrome browser...');
     console.log();
     
-    // Launch browser in VISIBLE mode
+    // Launch Chrome browser in VISIBLE mode
     const browser = await chromium.launch({
-        headless: false,  // VISIBLE so you can log in
-        slowMo: 100       // Slightly slower for better visibility
+        channel: 'chrome',  // Use Chrome instead of Chromium
+        headless: false,    // VISIBLE so you can log in
+        slowMo: 100         // Slightly slower for better visibility
     });
     
     // Create context WITHOUT saved state (fresh login)

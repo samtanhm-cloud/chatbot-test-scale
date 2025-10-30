@@ -19,13 +19,14 @@ import { chromium } from 'playwright';
 async function captureCookies() {
     console.log('🚀 Starting Cookie Capture...\n');
     console.log('📋 Instructions:');
-    console.log('   1. A browser window will open');
+    console.log('   1. A Chrome browser window will open');
     console.log('   2. Log in to Draftr manually (use SSO/2FA as normal)');
     console.log('   3. Wait until you see the Draftr asset page');
     console.log('   4. Press ENTER in this terminal when logged in\n');
     
-    // Launch browser in NON-headless mode
+    // Launch Chrome browser in NON-headless mode
     const browser = await chromium.launch({
+        channel: 'chrome',  // Use Chrome instead of Chromium
         headless: false,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
