@@ -1,0 +1,247 @@
+# Draftr Link Updater (Variable Template)
+
+**Updates links in Draftr email assets using variables**
+
+## Variables Required:
+- `{{asset_id}}` - Draftr asset ID (e.g., 3934720)
+- `{{new_url}}` - New URL to update link to (e.g., www.autodesk.com/uk/support)
+- `{{link_text}}` - (Optional) Text of link to update (e.g., "Get in touch")
+
+## Keywords
+draftr, link, update, email, automation, variable, template
+
+---
+
+## PHASE 1: Navigate to Asset
+
+### Step 1.1: Navigate to Draftr asset
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+### Step 1.2: Wait for page load
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+### Step 1.3: Take snapshot
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+### Step 1.4: Screenshot of asset page
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "draftr-asset-{{asset_id}}"
+  }
+}
+```
+
+---
+
+## PHASE 2: Extract Current Links
+
+### Step 2.1: Extract all links from asset
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), id: a.id || '' }); }); return { totalLinks: links.length, links: links, assetId: '{{asset_id}}' }; }"
+  }
+}
+```
+
+### Step 2.2: Screenshot before editing
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "asset-{{asset_id}}-before-edit"
+  }
+}
+```
+
+---
+
+## PHASE 3: Update Link
+
+### Step 3.1: Click on link input field
+**Note: This is a generic selector - you may need to customize based on actual Draftr UI**
+```mcp
+{
+  "tool": "playwright_click",
+  "params": {
+    "selector": "input[name*='link']"
+  }
+}
+```
+
+### Step 3.2: Wait for field focus
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 1000))"
+  }
+}
+```
+
+### Step 3.3: Fill new URL
+```mcp
+{
+  "tool": "playwright_fill",
+  "params": {
+    "selector": "input[name*='link']",
+    "value": "{{new_url}}"
+  }
+}
+```
+
+### Step 3.4: Press Enter to commit change
+```mcp
+{
+  "tool": "playwright_press_key",
+  "params": {
+    "key": "Enter"
+  }
+}
+```
+
+### Step 3.5: Wait for auto-save
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
+  }
+}
+```
+
+### Step 3.6: Screenshot after update
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "asset-{{asset_id}}-after-update"
+  }
+}
+```
+
+---
+
+## PHASE 4: Save Changes
+
+### Step 4.1: Click main Save button
+```mcp
+{
+  "tool": "playwright_click",
+  "params": {
+    "selector": "button[aria-label*='Save']"
+  }
+}
+```
+
+### Step 4.2: Wait for save confirmation
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 3000))"
+  }
+}
+```
+
+### Step 4.3: Take snapshot of result
+```mcp
+{
+  "tool": "playwright_get_visible_text",
+  "params": {}
+}
+```
+
+### Step 4.4: Final screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "asset-{{asset_id}}-saved"
+  }
+}
+```
+
+---
+
+## PHASE 5: Verification
+
+### Step 5.1: Reload page to verify
+```mcp
+{
+  "tool": "playwright_navigate",
+  "params": {
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}"
+  }
+}
+```
+
+### Step 5.2: Wait for reload
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
+  }
+}
+```
+
+### Step 5.3: Re-extract links to verify
+```mcp
+{
+  "tool": "playwright_evaluate",
+  "params": {
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); const targetLink = links.find(l => l.href.includes('{{new_url}}')); return { totalLinks: links.length, links: links, verification: 'Reloaded and re-extracted', targetLinkFound: !!targetLink, targetLink: targetLink || null }; }"
+  }
+}
+```
+
+### Step 5.4: Verification screenshot
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "asset-{{asset_id}}-verification"
+  }
+}
+```
+
+---
+
+## ⚙️ How to Use
+
+### Example Prompt:
+```
+run draftr updater on asset 3934720 and change link to www.autodesk.com/uk/support
+```
+
+### Variables Extracted:
+- `asset_id`: 3934720
+- `new_url`: www.autodesk.com/uk/support
+
+### Alternative Prompts:
+- "update draftr asset 123456 link to example.com"
+- "change link in draftr 789012 to newurl.com"
+- "draftr updater asset=555666 url=test.com"

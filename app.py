@@ -672,7 +672,7 @@ class PromptProcessor:
             for i, mdc in enumerate(available_mdc)
         ])
         
-        system_prompt = f"""You are an automation assistant. Match user requests to available MDC automation files.
+        system_prompt = f"""You are an automation assistant. Match user requests to available MDC automation files and extract variables.
 
 Available MDC files:
 {mdc_descriptions}
@@ -681,10 +681,16 @@ Respond with JSON containing:
 - "mdc_index": index of best matching MDC file (0-based)
 - "confidence": confidence score 0-1
 - "reason": brief explanation
-- "parameters": any extracted parameters from the prompt
+- "variables": extracted variables from the prompt (e.g., asset_id, new_url, link_text)
 
-Example response:
-{{"mdc_index": 0, "confidence": 0.95, "reason": "Keywords match automation purpose", "parameters": {{}}}}
+For Draftr automation prompts, extract:
+- "asset_id": Draftr asset ID (numbers like 3934720, 123456, etc.)
+- "new_url": URL to update link to (can include or exclude https://)
+- "link_text": Optional text of link to update (e.g., "Get in touch", "Contact us")
+
+Example responses:
+{{"mdc_index": 0, "confidence": 0.95, "reason": "Draftr link update request", "variables": {{"asset_id": "3934720", "new_url": "www.autodesk.com/uk/support"}}}}
+{{"mdc_index": 1, "confidence": 0.85, "reason": "Simple browser test", "variables": {{}}}}
 """
         
         try:
@@ -709,11 +715,18 @@ Example response:
             result = json.loads(response_text)
             
             if result.get("mdc_index") is not None:
+                # Extract variables, support both 'variables' and 'parameters' keys for backward compatibility
+                variables = result.get("variables", result.get("parameters", {}))
+                
+                # If no variables extracted by AI, try regex fallback
+                if not variables:
+                    variables = self._extract_variables_fallback(prompt)
+                
                 return {
                     "mdc_file": available_mdc[result["mdc_index"]],
                     "confidence": result.get("confidence", 0.5),
                     "reason": result.get("reason", ""),
-                    "parameters": result.get("parameters", {})
+                    "parameters": {"variables": variables} if variables else {}
                 }
         except Exception as e:
             st.warning(f"AI matching failed, using fallback: {str(e)}")
@@ -741,12 +754,57 @@ Example response:
                 best_score = score
                 best_match = mdc
         
+        # Extract variables using regex fallback
+        variables = self._extract_variables_fallback(prompt)
+        
         return {
             "mdc_file": best_match or available_mdc[0],
             "confidence": min(best_score / 5, 1.0),
             "reason": f"Keyword matching (score: {best_score})",
-            "parameters": {}
+            "parameters": {"variables": variables} if variables else {}
         }
+    
+    def _extract_variables_fallback(self, prompt: str) -> Dict:
+        """Extract variables from prompt using regex patterns (fallback method)"""
+        import re
+        variables = {}
+        
+        # Extract asset ID (numbers, typically 6-7 digits for Draftr)
+        asset_match = re.search(r'asset[:\s]+(\d+)|asset=(\d+)|on\s+(\d{6,8})', prompt, re.IGNORECASE)
+        if asset_match:
+            variables['asset_id'] = next((g for g in asset_match.groups() if g), None)
+        
+        # Extract URL patterns
+        url_patterns = [
+            r'to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "to www.example.com"
+            r'link\s+to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "link to example.com"
+            r'url[:\s]+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "url: example.com"
+            r'change.*to\s+((?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[\w.-]*)*)',  # "change ... to example.com"
+        ]
+        
+        for pattern in url_patterns:
+            url_match = re.search(pattern, prompt, re.IGNORECASE)
+            if url_match:
+                url = url_match.group(1)
+                # Normalize URL (remove protocol if present, we'll add it in MDC)
+                url = re.sub(r'^https?://', '', url)
+                variables['new_url'] = url
+                break
+        
+        # Extract link text (text in quotes or after "in")
+        link_text_patterns = [
+            r'"([^"]+)"',  # Text in double quotes
+            r"'([^']+)'",  # Text in single quotes
+            r'in\s+(["\'].*?["\']|[\w\s]+)\s+(?:to|link)',  # "in 'Get in touch' link"
+        ]
+        
+        for pattern in link_text_patterns:
+            text_match = re.search(pattern, prompt)
+            if text_match:
+                variables['link_text'] = text_match.group(1).strip('"\'')
+                break
+        
+        return variables
 
 
 def init_session_state():

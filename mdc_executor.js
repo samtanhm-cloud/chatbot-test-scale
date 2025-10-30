@@ -57,8 +57,14 @@ class MDCExecutor {
         
         try {
             // Read MDC file
-            const mdcContent = fs.readFileSync(mdcFilePath, 'utf-8');
+            let mdcContent = fs.readFileSync(mdcFilePath, 'utf-8');
             console.log(`[MDC Executor] Loaded MDC file (${mdcContent.length} bytes)`);
+            
+            // Substitute variables if provided
+            if (context.variables && Object.keys(context.variables).length > 0) {
+                console.log(`[MDC Executor] Substituting variables:`, context.variables);
+                mdcContent = this.substituteVariables(mdcContent, context.variables);
+            }
             
             // Parse MDC content and extract commands
             const commands = this.parseMDCCommands(mdcContent);
@@ -134,6 +140,29 @@ class MDCExecutor {
                 results: []
             };
         }
+    }
+
+    substituteVariables(mdcContent, variables) {
+        /**
+         * Substitute {{variable}} placeholders with actual values
+         * Example: {{asset_id}} -> 3934720
+         */
+        let result = mdcContent;
+        
+        for (const [key, value] of Object.entries(variables)) {
+            const placeholder = `{{${key}}}`;
+            const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+            result = result.replace(regex, value);
+            console.log(`[Variable Substitution] ${placeholder} -> ${value}`);
+        }
+        
+        // Check for remaining unsubstituted variables
+        const remainingVars = result.match(/\{\{([^}]+)\}\}/g);
+        if (remainingVars && remainingVars.length > 0) {
+            console.warn(`[Variable Substitution] Warning: Unsubstituted variables found:`, remainingVars);
+        }
+        
+        return result;
     }
 
     parseMDCCommands(mdcContent) {
@@ -418,7 +447,9 @@ async function main() {
         console.error('');
         console.error('Example:');
         console.error('  node mdc_executor.js automation.mdc');
-        console.error('  node mdc_executor.js automation.mdc --context \'{"assetId": "123"}\'');
+        console.error('  node mdc_executor.js automation.mdc --context \'{"variables": {"asset_id": "123", "new_url": "https://example.com"}}\'');
+        console.error('');
+        console.error('Variables are substituted using {{variable_name}} syntax in MDC files');
         process.exit(1);
     }
     
