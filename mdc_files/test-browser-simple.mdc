@@ -1,0 +1,35 @@
+# Simple Browser Test
+
+Tests that browser automation works end-to-end.
+
+## Test Steps
+
+### Step 1: Navigate to example.com
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "https://example.com"
+  }
+}
+```
+
+### Step 2: Take a screenshot
+```mcp
+{
+  "tool": "browser_take_screenshot",
+  "params": {
+    "filename": "test-page.png",
+    "type": "png"
+  }
+}
+```
+
+### Step 3: Get page snapshot
+```mcp
+{
+  "tool": "browser_snapshot",
+  "params": {}
+  }
+}
+```
