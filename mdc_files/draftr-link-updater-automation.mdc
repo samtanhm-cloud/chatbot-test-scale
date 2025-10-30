@@ -45,7 +45,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 5
+    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
@@ -63,8 +63,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_screenshot",
   "params": {
-    "filename": "draftr-auth-check.png",
-    "type": "png"
+    "name": "draftr-auth-check"
   }
 }
 ```
@@ -89,7 +88,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 5
+    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
@@ -107,7 +106,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), id: a.id || '' }); }); return { totalLinks: links.length, links: links, assetId: window.location.pathname.split('/').pop() }; }"
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim(), id: a.id || '' }); }); return { totalLinks: links.length, links: links, assetId: window.location.pathname.split('/').pop() }; }"
   }
 }
 ```
@@ -117,8 +116,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_screenshot",
   "params": {
-    "filename": "asset-before-edit.png",
-    "type": "png"
+    "name": "asset-before-edit"
   }
 }
 ```
@@ -138,13 +136,12 @@ draftr, link, update, email, automation, anchor, url, replace, save
 
 ### Step 3.2: Click on panel containing link
 **Example: Click on first panel/section with links**
-**Note: Update 'ref' with actual element reference from snapshot**
+**Note: Update selector with actual element from snapshot**
 ```mcp
 {
   "tool": "playwright_click",
   "params": {
-    "element": "Panel with Primary CTA",
-    "ref": "div[data-panel-id]"
+    "selector": "div[data-panel-id]"
   }
 }
 ```
@@ -154,7 +151,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 2
+    "script": "return new Promise(resolve => setTimeout(resolve, 2000))"
   }
 }
 ```
@@ -172,23 +169,22 @@ draftr, link, update, email, automation, anchor, url, replace, save
 ## PHASE 4: Update Links (CRITICAL WORKFLOW)
 
 ### Step 4.1: Click on link input field
-**Note: Update 'ref' with actual input field from panel editor**
+**Note: Update selector with actual input field from panel editor**
 ```mcp
 {
   "tool": "playwright_click",
   "params": {
-    "element": "Primary CTA Link input field",
-    "ref": "input[name*='link'], input[name*='url'], input[name*='href']"
+    "selector": "input[name*='link']"
   }
 }
 ```
 
-### Step 4.2: Select all existing text (Cmd+A on Mac, Ctrl+A on Windows)
+### Step 4.2: Select all existing text (triple-click to select all)
 ```mcp
 {
-  "tool": "playwright_press_key",
+  "tool": "playwright_click",
   "params": {
-    "key": "ControlOrMeta+a"
+    "selector": "input[name*='link']"
   }
 }
 ```
@@ -199,9 +195,8 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_fill",
   "params": {
-    "element": "Link input field",
-    "ref": "input[name*='link'], input[name*='url']",
-    "text": "https://www.autodesk.com/support/new-page"
+    "selector": "input[name*='link']",
+    "value": "https://www.autodesk.com/support/new-page"
   }
 }
 ```
@@ -224,7 +219,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 2
+    "script": "return new Promise(resolve => setTimeout(resolve, 2000))"
   }
 }
 ```
@@ -242,8 +237,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_screenshot",
   "params": {
-    "filename": "link-updated-in-panel.png",
-    "type": "png"
+    "name": "link-updated-in-panel"
   }
 }
 ```
@@ -254,13 +248,12 @@ draftr, link, update, email, automation, anchor, url, replace, save
 
 ### Step 5.1: Click main Save button (top toolbar)
 **This saves ALL panel changes to Draftr database**
-**Note: Update 'ref' with actual Save button selector**
+**Note: Update selector with actual Save button**
 ```mcp
 {
   "tool": "playwright_click",
   "params": {
-    "element": "Main Save button",
-    "ref": "button[aria-label*='Save'], button:has-text('Save')"
+    "selector": "button[aria-label*='Save']"
   }
 }
 ```
@@ -270,7 +263,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 3
+    "script": "return new Promise(resolve => setTimeout(resolve, 3000))"
   }
 }
 ```
@@ -288,8 +281,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_screenshot",
   "params": {
-    "filename": "asset-saved-confirmation.png",
-    "type": "png"
+    "name": "asset-saved-confirmation"
   }
 }
 ```
@@ -313,7 +305,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "time": 5
+    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
@@ -323,7 +315,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "function": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalLinks: links.length, links: links, verification: 'Reloaded and re-extracted' }; }"
+    "script": "() => { const links = []; document.querySelectorAll('a[href]').forEach((a, i) => { links.push({ index: i, href: a.href, text: a.textContent.trim() }); }); return { totalLinks: links.length, links: links, verification: 'Reloaded and re-extracted' }; }"
   }
 }
 ```
@@ -341,8 +333,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_screenshot",
   "params": {
-    "filename": "verification-after-reload.png",
-    "type": "png"
+    "name": "verification-after-reload"
   }
 }
 ```
