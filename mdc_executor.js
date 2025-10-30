@@ -362,16 +362,29 @@ class MDCExecutor {
             
             console.log(`[Command Executor] Completed in ${duration}ms`);
             
+            // For debugging: log the full result structure for evaluate commands
+            if (command.tool === 'playwright_evaluate') {
+                console.log(`[Command Executor] Full MCP Result:`, JSON.stringify(result, null, 2));
+            }
+            
             // Parse the result
             let parsedContent = result.content;
             if (Array.isArray(result.content) && result.content.length > 0) {
                 parsedContent = result.content[0];
             }
             
+            // Extract output text
+            let outputText = parsedContent?.text || parsedContent || 'Command executed successfully';
+            
+            // For JavaScript evaluate commands, enhance the output
+            if (command.tool === 'playwright_evaluate') {
+                console.log(`[JavaScript Evaluation] Raw output:`, outputText);
+            }
+            
             return {
                 success: !result.isError,
                 tool: command.tool,
-                output: parsedContent?.text || parsedContent || 'Command executed successfully',
+                output: outputText,
                 duration: duration,
                 timestamp: new Date().toISOString(),
                 isError: result.isError || false
