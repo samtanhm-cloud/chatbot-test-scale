@@ -1160,8 +1160,20 @@ def main():
             try:
                 import time
                 
-                # Check for IDSDK OAuth Token (PREFERRED)
-                if hasattr(st, 'secrets') and 'AUTODESK_ACCESS_TOKEN' in st.secrets:
+                # Check for Persistent Browser Session (BEST for local!)
+                session_file = Path(__file__).parent / 'auth' / 'draftr-session.json'
+                if session_file.exists():
+                    try:
+                        with open(session_file, 'r') as f:
+                            session_data = json.load(f)
+                            cookies_count = len(session_data.get('cookies', []))
+                            auth_status.success(f"✅ Authentication: Persistent Browser Session ({cookies_count} cookies saved)")
+                            auth_found = True
+                    except Exception as e:
+                        auth_status.warning(f"⚠️ Session file exists but couldn't be read: {e}")
+                
+                # Check for IDSDK OAuth Token (PREFERRED for cloud)
+                elif hasattr(st, 'secrets') and 'AUTODESK_ACCESS_TOKEN' in st.secrets:
                     token = st.secrets['AUTODESK_ACCESS_TOKEN']
                     token_expires_at = st.secrets.get('AUTODESK_TOKEN_EXPIRES_AT', 0)
                     
@@ -1188,7 +1200,17 @@ def main():
                     st.warning("⚠️ The automation will run without authentication. Draftr requires login!")
                     with st.expander("📋 Setup Authentication (Choose One)"):
                         st.markdown("""
-                        **Option 1: IDSDK OAuth Token (RECOMMENDED)**
+                        **Option 1: Persistent Browser Session (SIMPLEST for local!)**
+                        - Just log in once
+                        - No secrets needed
+                        - SSO/2FA automatic
+                        - Lasts 30+ days
+                        ```bash
+                        node setup_draftr_auth.js
+                        # Browser opens → Log in → Press ENTER → Done!
+                        ```
+                        
+                        **Option 2: IDSDK OAuth Token (BEST for cloud)**
                         - More secure (OAuth 2.0)
                         - Auto-refreshing
                         - SSO/2FA support
@@ -1197,9 +1219,9 @@ def main():
                         # Copy output to secrets
                         ```
                         
-                        **Option 2: Session Cookies (FALLBACK)**
+                        **Option 3: Session Cookies (FALLBACK)**
                         - Less secure
-                        - Manual recapture needed
+                        - Manual recapture needed (every 1-2 hours)
                         ```bash
                         node capture-cookies.js
                         # Add DRAFTR_COOKIES to secrets
