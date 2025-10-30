@@ -167,22 +167,20 @@ def install_dependencies_if_needed():
     if not playwright_marker.exists():
         logs.append("🎭 Installing Playwright chromium browser...")
         
-        # Install for BOTH global Playwright and MCP server's playwright-core
-        # The MCP server uses its own playwright-core which has separate browsers
+        # Install browsers for playwright-core (used by MCP server)
+        # MCP server looks in: node_modules/playwright-core/.local-browsers/
         install_commands = [
             {
+                'cmd': ['node', 'node_modules/playwright-core/cli.js', 'install', 'chromium'],
+                'desc': 'Root playwright-core (primary)'
+            },
+            {
+                'cmd': ['npx', 'playwright-core', 'install', 'chromium'],
+                'desc': 'playwright-core via npx'
+            },
+            {
                 'cmd': ['npx', 'playwright', 'install', 'chromium'],
-                'desc': 'Global Playwright'
-            },
-            {
-                'cmd': ['node', '-e', 
-                        'require("@executeautomation/playwright-mcp-server/node_modules/playwright-core/lib/server/registry").registry.installDeps()'],
-                'desc': 'MCP Server Playwright (attempt 1)'
-            },
-            {
-                'cmd': ['npx', '--prefix', 'node_modules/@executeautomation/playwright-mcp-server', 
-                        'playwright', 'install', 'chromium'],
-                'desc': 'MCP Server Playwright (attempt 2)'
+                'desc': 'Global Playwright (backup)'
             }
         ]
         
