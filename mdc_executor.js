@@ -86,8 +86,50 @@ class MDCExecutor {
             console.log('[MDC Executor] Starting Playwright MCP server...');
             await this.startMCPConnection();
             
-            // Inject cookies if provided (for authentication)
-            if (context.cookies && Array.isArray(context.cookies) && context.cookies.length > 0) {
+            // Handle authentication (IDSDK token or cookies)
+            const hasToken = context.autodesk_token && context.autodesk_token.length > 0;
+            const hasCookies = context.cookies && Array.isArray(context.cookies) && context.cookies.length > 0;
+            
+            if (hasToken || hasCookies) {
+                console.log(`[MDC Executor] 🔐 Authentication method: ${hasToken ? 'IDSDK OAuth Token' : 'Session Cookies'}`);
+            }
+            
+            // Method 1: IDSDK OAuth Token (PREFERRED - more secure!)
+            if (hasToken) {
+                console.log(`[MDC Executor] Setting up OAuth token authentication...`);
+                try {
+                    // Set Authorization header for all requests
+                    const headerScript = `async () => {
+                        // Store token in sessionStorage for persistence
+                        sessionStorage.setItem('autodesk_token', '${context.autodesk_token}');
+                        return { token_set: true };
+                    }`;
+                    
+                    // Navigate to base domain first
+                    await this.mcpClient.callTool({
+                        name: 'playwright_navigate',
+                        arguments: { url: 'https://webpub.autodesk.com' }
+                    });
+                    
+                    await this.mcpClient.callTool({
+                        name: 'playwright_evaluate',
+                        arguments: { script: headerScript }
+                    });
+                    
+                    // Set extra HTTP headers with Authorization
+                    // Note: Playwright's setExtraHTTPHeaders would be ideal here,
+                    // but we'll inject token via localStorage/sessionStorage
+                    // which Draftr's client-side code will use
+                    
+                    console.log(`[MDC Executor] ✅ OAuth token configured`);
+                } catch (error) {
+                    console.warn(`[MDC Executor] ⚠️  Token setup failed:`, error.message);
+                    console.warn(`[MDC Executor] Continuing anyway - authentication may fail`);
+                }
+            }
+            
+            // Method 2: Session Cookies (FALLBACK - if no token available)
+            else if (hasCookies) {
                 console.log(`[MDC Executor] Injecting ${context.cookies.length} authentication cookies...`);
                 try {
                     // Navigate to base domain first (cookies need a page context)

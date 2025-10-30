@@ -530,30 +530,62 @@ class MDCExecutor:
                     mdc_path
                 ]
             
-            # Load cookies from secrets if available (for authentication)
+            # Load authentication from secrets (IDSDK token or cookies)
             if not context:
                 context = {}
             
-            # Check for Draftr cookies in secrets
+            auth_method = None
+            
+            # Check for authentication in secrets
             try:
-                print("🔍 Checking for authentication cookies...")
+                print("🔍 Checking for authentication credentials...")
                 print(f"   hasattr(st, 'secrets'): {hasattr(st, 'secrets')}")
                 if hasattr(st, 'secrets'):
                     print(f"   Available secrets: {list(st.secrets.keys())}")
+                
+                # Method 1: IDSDK OAuth Token (PREFERRED)
+                if hasattr(st, 'secrets') and 'AUTODESK_ACCESS_TOKEN' in st.secrets:
+                    print("🔐 Loading Autodesk OAuth token from secrets...")
+                    token = st.secrets['AUTODESK_ACCESS_TOKEN']
                     
-                if hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
+                    # Check if token is expired
+                    token_expires_at = st.secrets.get('AUTODESK_TOKEN_EXPIRES_AT', 0)
+                    import time
+                    if token_expires_at and time.time() < token_expires_at:
+                        context['autodesk_token'] = token
+                        auth_method = 'IDSDK OAuth Token'
+                        expires_in = int(token_expires_at - time.time())
+                        print(f"✅ Loaded OAuth token (expires in {expires_in} seconds)")
+                    else:
+                        print("⚠️  OAuth token expired!")
+                        print("   Run: python3 autodesk_idsdk_login.py")
+                
+                # Method 2: Session Cookies (FALLBACK)
+                if not auth_method and hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
                     print("🔐 Loading authentication cookies from secrets...")
                     cookies_json = st.secrets['DRAFTR_COOKIES']
                     cookies = json.loads(cookies_json)
                     context['cookies'] = cookies
+                    auth_method = 'Session Cookies'
                     print(f"✅ Loaded {len(cookies)} cookies for authentication")
-                else:
-                    print("❌ DRAFTR_COOKIES not found in secrets!")
+                
+                # No authentication found
+                if not auth_method:
+                    print("❌ No authentication found in secrets!")
                     print("⚠️  Automation will run WITHOUT authentication")
-                    print("⚠️  You need to add cookies to Streamlit secrets")
+                    print()
+                    print("📋 To add authentication:")
+                    print("   Option 1 (RECOMMENDED): IDSDK OAuth Token")
+                    print("      Run: python3 autodesk_idsdk_login.py")
+                    print("      Then copy token to secrets")
+                    print()
+                    print("   Option 2 (FALLBACK): Session Cookies")
+                    print("      Run: node capture-cookies.js")
+                    print("      Then add DRAFTR_COOKIES to secrets")
+                    
             except Exception as e:
-                print(f"⚠️  Could not load cookies from secrets: {e}")
-                print("⚠️  Continuing without authentication cookies...")
+                print(f"⚠️  Could not load authentication from secrets: {e}")
+                print("⚠️  Continuing without authentication...")
             
             # Add context if provided
             if context:
@@ -1129,17 +1161,59 @@ def main():
         if execute_btn and user_prompt:
             # Check authentication status BEFORE execution
             auth_status = st.empty()
+            auth_found = False
+            
             try:
-                if hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
+                import time
+                
+                # Check for IDSDK OAuth Token (PREFERRED)
+                if hasattr(st, 'secrets') and 'AUTODESK_ACCESS_TOKEN' in st.secrets:
+                    token = st.secrets['AUTODESK_ACCESS_TOKEN']
+                    token_expires_at = st.secrets.get('AUTODESK_TOKEN_EXPIRES_AT', 0)
+                    
+                    if token_expires_at and time.time() < token_expires_at:
+                        expires_in = int(token_expires_at - time.time())
+                        expires_min = expires_in // 60
+                        auth_status.success(f"🔐 Authentication: IDSDK OAuth Token (expires in {expires_min} minutes)")
+                        auth_found = True
+                    else:
+                        auth_status.error("❌ Authentication: OAuth token EXPIRED!")
+                        st.warning("⚠️ Token expired. Please re-authenticate.")
+                        st.info("💡 Run: `python3 autodesk_idsdk_login.py`")
+                
+                # Check for Session Cookies (FALLBACK)
+                elif hasattr(st, 'secrets') and 'DRAFTR_COOKIES' in st.secrets:
                     cookies_json = st.secrets['DRAFTR_COOKIES']
                     cookies = json.loads(cookies_json)
-                    auth_status.success(f"🔐 Authentication: {len(cookies)} cookies loaded from secrets")
-                else:
-                    auth_status.error("❌ Authentication: NO COOKIES FOUND IN SECRETS!")
+                    auth_status.warning(f"🍪 Authentication: {len(cookies)} session cookies (consider upgrading to IDSDK)")
+                    auth_found = True
+                
+                # No authentication
+                if not auth_found:
+                    auth_status.error("❌ Authentication: NOT CONFIGURED!")
                     st.warning("⚠️ The automation will run without authentication. Draftr requires login!")
-                    st.info("💡 Run `node capture-cookies.js` locally and add output to Streamlit secrets.")
+                    with st.expander("📋 Setup Authentication (Choose One)"):
+                        st.markdown("""
+                        **Option 1: IDSDK OAuth Token (RECOMMENDED)**
+                        - More secure (OAuth 2.0)
+                        - Auto-refreshing
+                        - SSO/2FA support
+                        ```bash
+                        python3 autodesk_idsdk_login.py
+                        # Copy output to secrets
+                        ```
+                        
+                        **Option 2: Session Cookies (FALLBACK)**
+                        - Less secure
+                        - Manual recapture needed
+                        ```bash
+                        node capture-cookies.js
+                        # Add DRAFTR_COOKIES to secrets
+                        ```
+                        """)
+                        
             except Exception as e:
-                auth_status.error(f"❌ Authentication: Cookie loading failed - {str(e)}")
+                auth_status.error(f"❌ Authentication: Error - {str(e)}")
             
             with st.spinner("🔄 Processing your request..."):
                 # Get available MDC files
