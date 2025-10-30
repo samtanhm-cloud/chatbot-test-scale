@@ -1158,8 +1158,6 @@ def main():
             auth_found = False
             
             try:
-                import time
-                
                 # Check for Persistent Browser Session (BEST for local!)
                 session_file = Path(__file__).parent / 'auth' / 'draftr-session.json'
                 if session_file.exists():
