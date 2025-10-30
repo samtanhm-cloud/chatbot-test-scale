@@ -45,7 +45,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
@@ -88,7 +88,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
@@ -151,7 +151,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 2000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
   }
 }
 ```
@@ -219,7 +219,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 2000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 2000))"
   }
 }
 ```
@@ -263,7 +263,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 3000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 3000))"
   }
 }
 ```
@@ -305,7 +305,7 @@ draftr, link, update, email, automation, anchor, url, replace, save
 {
   "tool": "playwright_evaluate",
   "params": {
-    "script": "return new Promise(resolve => setTimeout(resolve, 5000))"
+    "script": "() => new Promise(resolve => setTimeout(resolve, 5000))"
   }
 }
 ```
