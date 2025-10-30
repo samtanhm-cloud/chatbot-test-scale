@@ -263,18 +263,30 @@ class MDCExecutor {
             });
             
             // Connect the client
+            console.log('[MCP Server] Attempting to connect...');
             await this.mcpClient.connect(transport);
-            console.log('[MCP Server] Connected successfully');
+            console.log('[MCP Server] ✅ Connected successfully');
             
             // List available tools
+            console.log('[MCP Server] Fetching tools list...');
             const toolsList = await this.mcpClient.listTools();
-            console.log(`[MCP Server] Available tools: ${toolsList.tools.length}`);
+            console.log(`[MCP Server] ========================================`);
+            console.log(`[MCP Server] AVAILABLE TOOLS: ${toolsList.tools.length}`);
+            console.log(`[MCP Server] ========================================`);
             
             // Always show tool names for debugging
-            console.log(`[MCP Server] Tool names:`);
-            toolsList.tools.forEach(tool => {
-                console.log(`[MCP Server]   - ${tool.name}`);
-            });
+            if (toolsList.tools && toolsList.tools.length > 0) {
+                console.log(`[MCP Server] TOOL NAMES (use these in your MDC files):`);
+                toolsList.tools.forEach((tool, index) => {
+                    console.log(`[MCP Server]   ${index + 1}. ${tool.name}`);
+                    if (tool.description) {
+                        console.log(`[MCP Server]      Description: ${tool.description.substring(0, 80)}...`);
+                    }
+                });
+                console.log(`[MCP Server] ========================================`);
+            } else {
+                console.error('[MCP Server] ⚠️ NO TOOLS AVAILABLE! This is a problem.');
+            }
             
         } catch (error) {
             console.error('[MCP Server] Failed to start:', error.message);

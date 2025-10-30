@@ -1,19 +1,18 @@
-# Playwright MCP Tool Reference Test
+# Playwright MCP Tool Test
 
-Testing the correct tool names based on official documentation.
+Testing with the ACTUAL tool names (all lowercase).
 
-## Test 1: Navigate to a website
+## Test 1: Navigate to example.com
 ```mcp
 {
-  "tool": "Playwright_navigate",
+  "tool": "playwright_navigate",
   "params": {
-    "url": "https://example.com",
-    "headless": true
+    "url": "https://example.com"
   }
 }
 ```
 
-## Test 2: Get visible text
+## Test 2: Get page text
 ```mcp
 {
   "tool": "playwright_get_visible_text",
@@ -21,15 +20,22 @@ Testing the correct tool names based on official documentation.
 }
 ```
 
-## Test 3: Take a screenshot
+## Test 3: Take screenshot
 ```mcp
 {
-  "tool": "Playwright_screenshot",
+  "tool": "playwright_screenshot",
   "params": {
-    "name": "example-page",
+    "name": "example-screenshot",
     "width": 1280,
-    "height": 720,
-    "savePng": true
+    "height": 720
   }
+}
+```
+
+## Test 4: Close browser
+```mcp
+{
+  "tool": "playwright_close",
+  "params": {}
 }
 ```
