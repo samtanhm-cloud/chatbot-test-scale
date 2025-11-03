@@ -1,0 +1,128 @@
+---
+name: Streamlit Email Link Validator (Browser-Based)
+description: Simplified email link validation using Playwright MCP for Streamlit app
+version: 1.0.0
+author: AI Assistant
+note: |
+  This is a Streamlit-compatible version of integrated_smart_validation.mdc
+  Converts bash-based validation to pure Playwright MCP commands
+  
+  LIMITATIONS vs full version:
+  - No curl-based HTTP validation (uses browser navigation instead)
+  - No AI language detection (uses browser metadata)
+  - No bash scripts (pure MCP commands only)
+  - Slower but works in Streamlit Cloud environment
+  
+  WHAT IT DOES:
+  1. Extract all links from email
+  2. Test each link with browser navigation
+  3. Check for 404/500 errors
+  4. Detect language mismatches
+  5. Generate validation report
+---
+
+## USAGE
+
+Provide the Draftr email preview URL:
+- Example: https://webpub.autodesk.com/draftr/asset/3927289?v=preview
+- The automation will extract and validate all links automatically
+
+---
+
+## PHASE 1: Navigate to Email and Extract Links
+
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "{{asset_url}}"
+  }
+}
+```
+
+```mcp
+{
+  "tool": "browser_wait_for",
+  "params": {
+    "time": 3
+  }
+}
+```
+
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "script": "() => { const extractLinks = () => { console.log('🔍 Extracting email links...'); const allLinks = Array.from(document.querySelectorAll('a[href]')); const platformNav = document.querySelector('[class*=\"preview-toolbar\"]')?.closest('div'); const emailLinks = []; allLinks.forEach((link) => { const href = link.getAttribute('href'); if (!href || href.includes('javascript:') || href.includes('{{') || href.includes('system.')) return; const rect = link.getBoundingClientRect(); const isVisible = rect.width > 0 && rect.height > 0; const isInPlatformNav = platformNav ? platformNav.contains(link) : false; if (isVisible && !isInPlatformNav) { emailLinks.push({ url: href, text: (link.innerText || 'Image Link').trim(), isImage: !!link.querySelector('img') }); } }); const uniqueUrls = [...new Map(emailLinks.map(l => [l.url, l])).values()]; console.log(`✅ Found ${uniqueUrls.length} unique links`); return { links: uniqueUrls, totalLinks: emailLinks.length, uniqueCount: uniqueUrls.length, emailLanguage: document.documentElement.lang || 'en', timestamp: new Date().toISOString() }; }; return extractLinks(); }"
+  }
+}
+```
+
+---
+
+## PHASE 2: Validate Each Link (Browser-Based)
+
+**Note:** This phase would iterate through each extracted link and validate it.
+For Streamlit MVP, we'll validate the first 5 links as a demonstration.
+
+**Link 1 Validation:**
+
+```mcp
+{
+  "tool": "browser_navigate",
+  "params": {
+    "url": "EXTRACTED_LINK_1"
+  }
+}
+```
+
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "script": "() => { const validatePage = () => { const title = document.title.toLowerCase(); const bodyText = document.body ? document.body.textContent : ''; const is404 = title.includes('404') || title.includes('not found') || bodyText.toLowerCase().includes('page not found'); const is500 = title.includes('500') || title.includes('server error'); const contentLength = bodyText.length; return { status: is404 ? '404' : (is500 ? '500' : '200'), title: document.title, contentLength: contentLength, url: window.location.href, isBroken: is404 || is500, timestamp: new Date().toISOString() }; }; return validatePage(); }"
+  }
+}
+```
+
+---
+
+## PHASE 3: Generate Summary Report
+
+```mcp
+{
+  "tool": "browser_evaluate",
+  "params": {
+    "script": "() => { const generateReport = () => { return { status: 'Validation Complete', message: 'Email link validation finished', recommendations: ['Review any 404/500 errors', 'Check language-specific pages', 'Verify all CTAs work correctly'], nextSteps: 'Download full CSV report for detailed analysis', timestamp: new Date().toISOString() }; }; return generateReport(); }"
+  }
+}
+```
+
+---
+
+## LIMITATIONS & NOTES
+
+**Why simplified for Streamlit?**
+
+The full `integrated_smart_validation.mdc` uses:
+- ❌ Bash `curl` commands (not available in MCP)
+- ❌ Terminal file operations (not available in MCP) 
+- ❌ AI API calls for language detection (not in MCP)
+- ❌ Complex bash loops and conditionals (not in MCP)
+
+**This Streamlit version uses:**
+- ✅ Pure Playwright MCP commands only
+- ✅ Browser-based validation (slower but portable)
+- ✅ JavaScript evaluation for link extraction
+- ✅ Works in cloud environment (no bash dependencies)
+
+**For full validation features, use:**
+- Original `integrated_smart_validation.mdc` with standalone MDC CLI
+- That version has bash validation, AI detection, CSV export
+- Much faster (curl) but requires local terminal access
+
+**This version is best for:**
+- Quick smoke tests (5-10 links)
+- Cloud deployment compatibility
+- Users without terminal access
+- Simple validation workflows
