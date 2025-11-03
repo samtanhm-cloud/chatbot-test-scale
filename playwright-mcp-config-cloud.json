@@ -1,13 +1,12 @@
 {
+  "_comment": "Cloud configuration - Uses Chromium (bundled with Playwright) on Linux",
   "browser": {
-    "channel": "chrome",
-    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": true,
     "args": [
-      "--headless=new",
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
+      "--disable-gpu",
       "--disable-background-networking",
       "--disable-default-apps",
       "--no-first-run",
@@ -16,14 +15,12 @@
   },
   "defaultTimeout": 30000,
   "launchOptions": {
-    "channel": "chrome",
-    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "headless": true,
     "args": [
-      "--headless=new",
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage"
+      "--disable-dev-shm-usage",
+      "--disable-gpu"
     ]
   },
   "contextOptions": {
