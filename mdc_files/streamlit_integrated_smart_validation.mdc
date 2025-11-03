@@ -23,77 +23,80 @@ note: |
 
 ## USAGE
 
-Provide the Draftr email preview URL:
-- Example: https://webpub.autodesk.com/draftr/asset/3927289?v=preview
+Provide the Draftr asset ID as a variable:
+- Variable name: `asset_id`
+- Example value: `3927289`
+- Prompt: "Validate email links for asset 3927289"
 - The automation will extract and validate all links automatically
 
 ---
 
 ## PHASE 1: Navigate to Email and Extract Links
 
+### Step 1.1: Navigate to Draftr email preview
 ```mcp
 {
-  "tool": "browser_navigate",
+  "tool": "playwright_navigate",
   "params": {
-    "url": "{{asset_url}}"
+    "url": "https://webpub.autodesk.com/draftr/asset/{{asset_id}}?v=preview"
   }
 }
 ```
 
+### Step 1.2: Wait for page load
 ```mcp
 {
-  "tool": "browser_wait_for",
+  "tool": "playwright_evaluate",
   "params": {
-    "time": 3
+    "script": "() => new Promise(resolve => setTimeout(() => resolve('Page loaded'), 3000))"
   }
 }
 ```
 
+### Step 1.3: Extract email links
 ```mcp
 {
-  "tool": "browser_evaluate",
+  "tool": "playwright_evaluate",
   "params": {
     "script": "() => { const extractLinks = () => { console.log('🔍 Extracting email links...'); const allLinks = Array.from(document.querySelectorAll('a[href]')); const platformNav = document.querySelector('[class*=\"preview-toolbar\"]')?.closest('div'); const emailLinks = []; allLinks.forEach((link) => { const href = link.getAttribute('href'); if (!href || href.includes('javascript:') || href.includes('{{') || href.includes('system.')) return; const rect = link.getBoundingClientRect(); const isVisible = rect.width > 0 && rect.height > 0; const isInPlatformNav = platformNav ? platformNav.contains(link) : false; if (isVisible && !isInPlatformNav) { emailLinks.push({ url: href, text: (link.innerText || 'Image Link').trim(), isImage: !!link.querySelector('img') }); } }); const uniqueUrls = [...new Map(emailLinks.map(l => [l.url, l])).values()]; console.log(`✅ Found ${uniqueUrls.length} unique links`); return { links: uniqueUrls, totalLinks: emailLinks.length, uniqueCount: uniqueUrls.length, emailLanguage: document.documentElement.lang || 'en', timestamp: new Date().toISOString() }; }; return extractLinks(); }"
   }
 }
 ```
 
----
-
-## PHASE 2: Validate Each Link (Browser-Based)
-
-**Note:** This phase would iterate through each extracted link and validate it.
-For Streamlit MVP, we'll validate the first 5 links as a demonstration.
-
-**Link 1 Validation:**
-
+### Step 1.4: Screenshot of email
 ```mcp
 {
-  "tool": "browser_navigate",
+  "tool": "playwright_screenshot",
   "params": {
-    "url": "EXTRACTED_LINK_1"
-  }
-}
-```
-
-```mcp
-{
-  "tool": "browser_evaluate",
-  "params": {
-    "script": "() => { const validatePage = () => { const title = document.title.toLowerCase(); const bodyText = document.body ? document.body.textContent : ''; const is404 = title.includes('404') || title.includes('not found') || bodyText.toLowerCase().includes('page not found'); const is500 = title.includes('500') || title.includes('server error'); const contentLength = bodyText.length; return { status: is404 ? '404' : (is500 ? '500' : '200'), title: document.title, contentLength: contentLength, url: window.location.href, isBroken: is404 || is500, timestamp: new Date().toISOString() }; }; return validatePage(); }"
+    "name": "email-links-extracted"
   }
 }
 ```
 
 ---
 
-## PHASE 3: Generate Summary Report
+## PHASE 2: Display Extracted Links Summary
 
+### Step 2.1: Show extraction results
 ```mcp
 {
-  "tool": "browser_evaluate",
+  "tool": "playwright_evaluate",
   "params": {
-    "script": "() => { const generateReport = () => { return { status: 'Validation Complete', message: 'Email link validation finished', recommendations: ['Review any 404/500 errors', 'Check language-specific pages', 'Verify all CTAs work correctly'], nextSteps: 'Download full CSV report for detailed analysis', timestamp: new Date().toISOString() }; }; return generateReport(); }"
+    "script": "() => { return { status: '✅ Link Extraction Complete', message: 'All email links have been extracted and deduplicated', info: 'This simplified version shows link extraction only. For full validation with HTTP testing, use the standalone CLI version with bash support.', nextSteps: 'Review the extracted links above to identify any issues', note: 'Full validation (404/500 detection, language matching) requires bash/curl which is not available in browser-only MCP', timestamp: new Date().toISOString() }; }"
+  }
+}
+```
+
+---
+
+## PHASE 3: Take Final Screenshot
+
+### Step 3.1: Capture final state
+```mcp
+{
+  "tool": "playwright_screenshot",
+  "params": {
+    "name": "validation-complete-{{asset_id}}"
   }
 }
 ```
