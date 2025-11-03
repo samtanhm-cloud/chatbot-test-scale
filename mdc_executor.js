@@ -25,8 +25,14 @@ class MDCExecutor {
         this.isCloud = process.env.STREAMLIT_RUNTIME_ENV === 'cloud' || 
                       fs.existsSync('/mount/src');
         
+        // Detect platform for browser configuration
+        const isLinux = process.platform === 'linux';
+        
         // Build MCP server args with config file path
         const configPath = path.join(__dirname, 'playwright-mcp-config.json');
+        
+        // Generate dynamic config based on platform
+        this.generatePlatformConfig(configPath, isLinux);
         
         if (process.env.MCP_SERVER_ARGS) {
             this.mcpServerArgs = process.env.MCP_SERVER_ARGS.split(' ');
@@ -48,8 +54,69 @@ class MDCExecutor {
         this.mcpClient = null;
         this.mcpServerProcess = null;
         
+        console.log(`[MDC Executor] Platform: ${process.platform} (Linux: ${isLinux})`);
         console.log(`[MDC Executor] Running in ${this.isCloud ? 'cloud' : 'local'} mode`);
         console.log(`[MDC Executor] Headless mode forced: ${process.env.PLAYWRIGHT_HEADLESS}`);
+    }
+    
+    generatePlatformConfig(configPath, isLinux) {
+        // Dynamic browser configuration based on platform
+        const browserConfig = isLinux ? {
+            // Linux (Streamlit Cloud): Use Chromium (bundled with Playwright)
+            browser: {
+                headless: true,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu"
+                ]
+            },
+            launchOptions: {
+                headless: true,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu"
+                ]
+            }
+        } : {
+            // macOS/Windows: Use Chrome via channel
+            browser: {
+                channel: "chrome",
+                headless: false,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage"
+                ]
+            },
+            launchOptions: {
+                channel: "chrome",
+                headless: false,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage"
+                ]
+            }
+        };
+        
+        // Full config
+        const config = {
+            ...browserConfig,
+            contextOptions: {
+                storageState: "auth/draftr-session.json"
+            },
+            defaultTimeout: 180000,
+            navigationTimeout: 180000,
+            actionTimeout: 180000
+        };
+        
+        // Write config file
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        console.log(`[MDC Executor] Generated ${isLinux ? 'Linux (Chromium)' : 'macOS (Chrome)'} config`);
     }
 
     async executeMDC(mdcFilePath, context = {}) {
