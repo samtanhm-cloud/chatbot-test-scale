@@ -166,7 +166,7 @@ def install_dependencies_if_needed():
     
     # Install Playwright browsers if needed
     if not playwright_marker.exists():
-        logs.append("🎭 Installing Playwright Chrome browser...")
+        logs.append("🎭 Installing Playwright Chromium browser...")
         
         # Install browsers for playwright-core (used by MCP server)
         # MCP server looks in: node_modules/playwright-core/.local-browsers/
@@ -180,15 +180,26 @@ def install_dependencies_if_needed():
         install_env['PLAYWRIGHT_BROWSERS_PATH'] = '0'  # Force local installation
         logs.append(f"   PLAYWRIGHT_BROWSERS_PATH=0 (forces local install)")
         
+        # Detect OS - use chromium for Linux (Streamlit Cloud), chrome for macOS
+        import platform
+        is_linux = platform.system() == 'Linux'
+        browser_type = 'chromium' if is_linux else 'chrome'
+        logs.append(f"   Platform: {platform.system()}, Browser: {browser_type}")
+        
         install_commands = [
             {
-                'cmd': ['node', 'node_modules/playwright-core/cli.js', 'install', 'chrome'],
-                'desc': 'playwright-core CLI (local mode)',
+                'cmd': ['node', 'node_modules/playwright-core/cli.js', 'install', browser_type],
+                'desc': f'playwright-core CLI - {browser_type} (local mode)',
                 'env': install_env
             },
             {
-                'cmd': ['npx', 'playwright-core', 'install', 'chrome'],
-                'desc': 'playwright-core via npx (local mode)',
+                'cmd': ['npx', 'playwright-core', 'install', browser_type],
+                'desc': f'playwright-core via npx - {browser_type} (local mode)',
+                'env': install_env
+            },
+            {
+                'cmd': ['npx', 'playwright-core', 'install-deps', browser_type],
+                'desc': f'playwright-core dependencies for {browser_type}',
                 'env': install_env
             }
         ]
@@ -506,6 +517,15 @@ class MDCExecutor:
             # Prepare execution command
             # Use xvfb-run to wrap the command on Streamlit Cloud
             is_cloud = os.getenv('STREAMLIT_RUNTIME_ENV') == 'cloud' or os.path.exists('/mount/src')
+            
+            # Choose executor based on environment
+            if is_cloud:
+                # Cloud: Use MCP server (headless)
+                executor_script = 'mdc_executor.js'
+            else:
+                # Local: Use direct Playwright (visible browser)
+                executor_script = 'playwright_direct_executor.js'
+                print(f"🏠 Local mode: Using direct Playwright executor for VISIBLE browser")
             
             if is_cloud:
                 # Wrap with xvfb-run to provide X server
