@@ -69,3 +69,4 @@ temp/
 # Documentation archive (not needed for deployment)
 docs_archive/
 
+mdc_files/integrated_smart_validation.mdc
